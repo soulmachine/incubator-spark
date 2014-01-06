@@ -60,26 +60,6 @@ class RandomForestModel(val trees: Array[Node], val metainfo: DataMetainfo) exte
       else DataUtils.maxindex(rng, predictions)
     }
   }
-  
-  /**
-   * Classifies the data and calls callback for each classification
-   */
-  def predict(data: Data, predictions: Array[Array[Double]]) {
-    require (data.size == predictions.length, "predictions.length must be equal to data.size()")
-
-    if (data.isEmpty) return // nothing to classify
-
-    var treeId = 0
-    for (tree <- trees) {
-      for (index <- 0 until data.size) {
-        if (predictions(index) == null) {
-          predictions(index) = new Array[Double](trees.size)
-        }
-        predictions(index)(treeId) = tree.classify(data.points(index).features)
-      }
-      treeId += 1
-    }
-  }
 }
 
 /**

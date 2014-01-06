@@ -42,10 +42,10 @@ class RandomForest(private val metainfo: DataMetainfo, private val nbTrees: Int)
    */
   def run(input: RDD[LabeledPoint]) : RandomForestModel = {
     val numPartitions = input.partitions.length
+    val rnd = new Random()
     
     val trees = input.mapPartitionsWithIndex { (index, iterator) =>
       val data = Data(metainfo, iterator.toList)
-      val rnd = new Random()
       val builder: TreeBuilder = new DecisionTreeBuilder()
       val numTrees = nbTreesOfPartition(numPartitions, index)
       
@@ -105,8 +105,15 @@ object RandomForest {
       nbTrees: Int = -1) : RandomForestModel = {
     train(input, new DataMetainfo(classification, categorical, nbLabels, nbValues), nbTrees)
   }
-  
-  private def train(input: RDD[LabeledPoint], 
-      metainfo: DataMetainfo, nbTrees: Int): RandomForestModel = 
+
+  /**
+   * Train a Random Forest model given an RDD of (label, features) pairs.
+   *
+   * @param input RDD of (label, array of features) pairs, for categorical features,
+   *        they should be converted to Integers, starting from 0.
+   * @param metainfo Metainfo of training data
+   * @param nbTrees Number of trees to build, should be greater than number of partitions.
+   */
+  def train(input: RDD[LabeledPoint], metainfo: DataMetainfo, nbTrees: Int): RandomForestModel =
     new RandomForest(metainfo, nbTrees).run(input)
 }
