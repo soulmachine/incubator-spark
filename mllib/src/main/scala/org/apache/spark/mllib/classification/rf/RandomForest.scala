@@ -27,19 +27,20 @@ import org.apache.spark.mllib.regression._
  *
  * @param metaInfo MetaInfo of training data.
  * @param nbTrees Number of trees to build.
+ * @param seed Random seed.
  */
-class RandomForest(private val metaInfo: DataMetaInfo, private val nbTrees: Int)
+class RandomForest(private val metaInfo: DataMetaInfo, private val nbTrees: Int, seed: Int)
     extends Serializable{
   /**
    * Run the algorithm with the configured parameters on an input RDD of LabeledPoint .
    */
   def run(input: RDD[LabeledPoint]) : RandomForestModel = {
     val numPartitions = input.partitions.length
-    val rnd = new Random()
 
     val trees = input.mapPartitionsWithIndex { (index, iterator) =>
+      val rnd = new Random(seed)
       val data = Data(metaInfo, iterator.toList)
-      val builder: TreeBuilder = new DecisionTreeBuilder()
+      val builder = new DecisionTreeBuilder()
       val numTrees = nbTreesOfPartition(numPartitions, index)
 
       val trees = new Array[Node](numTrees)
@@ -50,7 +51,7 @@ class RandomForest(private val metaInfo: DataMetaInfo, private val nbTrees: Int)
       trees.toIterator
     }
 
-    new RandomForestModel(trees.collect(), metaInfo)
+    new RandomForestModel(trees.collect(), metaInfo, seed)
   }
 
   /**
@@ -66,7 +67,7 @@ class RandomForest(private val metaInfo: DataMetaInfo, private val nbTrees: Int)
     if (result <= 0) result = 1
     else {
       if (partition == 0) {
-        result += nbTrees - nbTrees * nbPartitions
+        result += nbTrees - result * nbPartitions
       }
     }
     result
@@ -80,6 +81,7 @@ object RandomForest {
    *
    * @param input RDD of (label, array of features) pairs, for categorical features,
    *        they should be converted to Integers, starting from 0.
+   * @param seed seed Random seed
    * @param classification Whether the label is categorical or numerical.
    * @param categorical Whether the label is categorical or numerical, true if categorical,
    *                    false if numerical.when one feature is categorical, the corresponding
@@ -91,12 +93,13 @@ object RandomForest {
    */
   def train(
       input: RDD[LabeledPoint],
+      seed: Int,
       classification: Boolean,
       categorical: Array[Boolean],
       nbLabels: Int = -1,
       nbValues: Array[Int] = null,
       nbTrees: Int = -1) : RandomForestModel = {
-    train(input, new DataMetaInfo(classification, categorical, nbLabels, nbValues), nbTrees)
+    train(input, seed, new DataMetaInfo(classification, categorical, nbLabels, nbValues), nbTrees)
   }
 
   /**
@@ -104,10 +107,15 @@ object RandomForest {
    *
    * @param input RDD of (label, array of features) pairs, for categorical features,
    *        they should be converted to Integers, starting from 0.
-   * @param metainfo Metainfo of training data
+   * @param seed seed Random seed
+   * @param metaInfo Meta info of training data
    * @param nbTrees Number of trees to build, should be greater than number of partitions.
    */
-  def train(input: RDD[LabeledPoint], metainfo: DataMetaInfo, nbTrees: Int): RandomForestModel = {
-    new RandomForest(metainfo, nbTrees).run(input)
+  private[classification] def train(
+       input: RDD[LabeledPoint],
+       seed: Int,
+       metaInfo: DataMetaInfo,
+       nbTrees: Int): RandomForestModel = {
+    new RandomForest(metaInfo, nbTrees, seed).run(input)
   }
 }

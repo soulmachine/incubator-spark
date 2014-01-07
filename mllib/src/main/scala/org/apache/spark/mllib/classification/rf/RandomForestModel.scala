@@ -22,16 +22,17 @@ import scala.util.Random
 
 import org.apache.spark.rdd.RDD
 import org.apache.spark.mllib.classification.ClassificationModel
+import java.io.ObjectInputStream
 
 /**
  * Classification model trained using Logistic Regression.
  *
  * @param trees trees that are built on training data.
- * @param metaInfo the metainfo of data.
+ * @param metaInfo the metaInfo of data.
+ * @param seed Random seed.
  */
-class RandomForestModel(val trees: Array[Node], val metaInfo: DataMetaInfo) extends ClassificationModel {
-
-  /*@transient*/ private val rng = new Random()
+class RandomForestModel(val trees: Array[Node], val metaInfo: DataMetaInfo, seed: Int) extends ClassificationModel {
+  @transient private var rnd = new Random(seed)
 
   def predict(testData: RDD[Array[Double]]): RDD[Double] = testData.map(predict)
 
@@ -40,7 +41,7 @@ class RandomForestModel(val trees: Array[Node], val metaInfo: DataMetaInfo) exte
       var sum = 0.0
       var cnt = 0
       trees.foreach { tree =>
-        val prediction = tree.classify(testData)
+        val prediction = tree.classify(rnd, testData)
         if (!prediction.isNaN) {
           sum += prediction
           cnt += 1
@@ -50,15 +51,20 @@ class RandomForestModel(val trees: Array[Node], val metaInfo: DataMetaInfo) exte
     } else {
       val predictions = new Array[Int](metaInfo.nbLabels)
       trees.foreach { tree =>
-        val prediction = tree.classify(testData)
+        val prediction = tree.classify(rnd, testData)
         if (!prediction.isNaN) {
           predictions(prediction.toInt) += 1
         }
       }
 
       if (predictions.sum == 0) Double.NaN  // no prediction available
-      else DataUtils.maxIndex(rng, predictions)
+      else DataUtils.maxIndex(rnd, predictions)
     }
+  }
+
+  private def readObject(stream: ObjectInputStream) {
+    stream.defaultReadObject()
+    rnd = new Random(seed)
   }
 }
 
@@ -72,7 +78,7 @@ abstract class Node extends Serializable {
    *
    * @return -1 if the label cannot be predicted
    */
-  def classify(x : Array[Double]): Double
+  def classify(rnd: Random, x : Array[Double]): Double
 
   /**
    * @return the total number of nodes of the tree
@@ -90,7 +96,7 @@ abstract class Node extends Serializable {
  */
 class Leaf(val label: Double) extends Node {
 
-  override def classify(x: Array[Double]): Double = label
+  override def classify(rnd: Random, x: Array[Double]): Double = label
 
   override def maxDepth(): Long = 1
 
@@ -103,10 +109,10 @@ class CategoricalNode(private val feature: Int,
 
   def this() = this(0, null, null)
 
-  override def classify(x: Array[Double]): Double = {
+  override def classify(rnd: Random, x: Array[Double]): Double = {
     val index = values.indexOf(x(feature))
 
-    if (index == -1) Double.NaN else children(index).classify(x)
+    if (index == -1) Double.NaN else children(index).classify(rnd, x)
   }
 
   override def maxDepth(): Long =  children.map(child => child.maxDepth()).max + 1
@@ -127,8 +133,8 @@ class NumericalNode(private val feature: Int,
     private val loChild: Node,
     private val hiChild: Node) extends Node {
 
-  override def classify(x: Array[Double]): Double = {
-    if (x(feature) < split) loChild.classify(x) else hiChild.classify(x)
+  override def classify(rnd: Random, x: Array[Double]): Double = {
+    if (x(feature) < split) loChild.classify(rnd, x) else hiChild.classify(rnd, x)
   }
 
   override def maxDepth(): Long = 1 + math.max(loChild.maxDepth(), hiChild.maxDepth())

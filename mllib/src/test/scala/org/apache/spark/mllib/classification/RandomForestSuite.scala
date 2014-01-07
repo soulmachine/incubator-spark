@@ -24,7 +24,7 @@ import org.scalatest.FunSuite
 import org.apache.spark.SparkContext
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.mllib.classification.rf.{Node, Data, DataMetaInfo}
-import org.apache.spark.mllib.classification.rf.{DecisionTreeBuilder, RandomForestModel}
+import org.apache.spark.mllib.classification.rf.{DecisionTreeBuilder, RandomForest, RandomForestModel}
 import org.apache.spark.mllib.classification.rf.DefaultComputeSplit
 import org.apache.spark.mllib.classification.rf.ClassificationComputeSplit
 import org.apache.spark.mllib.classification.rf.RegressionComputeSplit
@@ -34,7 +34,9 @@ class RandomForestSuite extends FunSuite with BeforeAndAfterAll {
   /** "Close enough" value for floating-point comparisons. */
   @transient private val EPSILON = 0.000001
   @transient private var sc: SparkContext = _
-  @transient private val rnd = new Random()
+  @transient private val seed = 17
+  @transient private val rnd = new Random(seed)
+
   val metaInfo = DataMetaInfo(classification = true, Array(true, false, false, true), 2, Array(3, -1,-1,2))
   @transient private val TRAIN_DATA = List(LabeledPoint(1,Array(1,85.0,85,0)),
     LabeledPoint(1,Array(1,80.0,90,1)), LabeledPoint(0,Array(2,83.0,86,0)),
@@ -109,7 +111,7 @@ class RandomForestSuite extends FunSuite with BeforeAndAfterAll {
       builder.setMinSplitNum(0)
       trees(i) = builder.build(rnd, data)
     }
-    new RandomForestModel(trees, datas(0).metainfo)
+    new RandomForestModel(trees, datas(0).metainfo, seed)
   }
 
   test ("ClassificationComputeSplit") {
@@ -156,30 +158,29 @@ class RandomForestSuite extends FunSuite with BeforeAndAfterAll {
     // Build Forest
     val forest = buildForest(dataset)
 
-    assert(math.abs(1.0 - forest.predict(TEST_DATA(0))) < EPSILON)
-    // This one is tie-broken -- 1 is OK too
-    // assert(math.abs(0.0 - forest.predict(TEST_DATA(1))) < EPSILON)
-    assert(math.abs(1.0 - forest.predict(TEST_DATA(2))) < EPSILON)
+    println(forest.predict(TEST_DATA(0)))
+    println(forest.predict(TEST_DATA(1)))
+    println(forest.predict(TEST_DATA(2)))
+    assert(1.0 == forest.predict(TEST_DATA(0)))
+    // This one is tie-broken -- 0 is OK too
+    assert(1.0 == forest.predict(TEST_DATA(1)))
+    assert(1.0 == forest.predict(TEST_DATA(2)))
   }
 
-//  test("Spark Random forest for classification") {
-//    // Training data
-//    val datas = generateTrainingDataA()
-//
-//    val data0 = sc.parallelize(datas(0).points, 1)
-//    val forest0 = RandomForest.train(data0, metainfo, -1)
-//
-//    val data1 = sc.parallelize(datas(1).points, 1)
-//    val forest1 = RandomForest.train(data1, metainfo,  -1)
-//    // Build Forest
-//    val forest = new RandomForestModel(Array(forest0.trees(0),forest1.trees(0)), metainfo)
-//
-//    println(forest.predict(TEST_DATA(0)))
-//    println(forest.predict(TEST_DATA(1)))
-//    println(forest.predict(TEST_DATA(2)))
-//    assert(math.abs(1.0 - forest.predict(TEST_DATA(0))) < EPSILON)
-//    // This one is tie-broken -- 1 is OK too
-//    // assert(math.abs(0.0 - forest.predict(TEST_DATA(1))) < EPSILON)
-//    assert(math.abs(1.0 - forest.predict(TEST_DATA(2))) < EPSILON)
-//  }
+  test("Spark Random forest for classification") {
+    // Training data
+    val dataset = generateTrainingDataA()
+    val data = dataset(0).points ++ dataset(1).points
+    val dataRDD  = sc.parallelize(data ++ data, 2)
+
+    val total = 100
+    var error = 0
+    for (i <- 0 until total) {
+      val forest = RandomForest.train(dataRDD, seed, metaInfo, 10)
+
+      if (forest.predict(TEST_DATA(0)) != 1) error += 1
+      if (forest.predict(TEST_DATA(2)) != 1) error += 1
+    }
+    assert(error < 2 * total * 0.1)   // error rate must be lesser than 10%
+  }
 }
