@@ -39,7 +39,7 @@ class RandomForest(private val metaInfo: DataMetaInfo, private val nbTrees: Int,
 
     val trees = input.mapPartitionsWithIndex { (index, iterator) =>
       val rnd = new Random(seed)
-      val data = Data(metaInfo, iterator.toList)
+      val data = Data(metaInfo, iterator.toArray)
       val builder = new DecisionTreeBuilder()
       val numTrees = nbTreesOfPartition(numPartitions, index)
 
@@ -73,7 +73,6 @@ class RandomForest(private val metaInfo: DataMetaInfo, private val nbTrees: Int,
     result
   }
 }
-
 
 object RandomForest {
   /**

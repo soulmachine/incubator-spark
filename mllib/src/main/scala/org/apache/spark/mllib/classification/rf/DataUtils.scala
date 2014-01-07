@@ -21,7 +21,7 @@ import scala.util.Random
 import scala.collection.mutable.ListBuffer
 
 
-object DataUtils {
+private [rf] object DataUtils {
 
   /**
    * foreach i : array1[i] += array2[i]

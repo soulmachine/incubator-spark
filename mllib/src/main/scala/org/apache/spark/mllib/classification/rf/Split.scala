@@ -29,20 +29,20 @@ import org.apache.spark.mllib.regression.LabeledPoint
  * @param ig Information Gain of the split
  * @param split split value for NUMERICAL features
  */
-case class Split(feature: Int, ig: Double, split: Double = Double.NaN) {
+private [rf] case class Split(feature: Int, ig: Double, split: Double = Double.NaN) {
   override def toString: String = "feature: " + feature + ", ig: " + ig + ", split: " + split
 }
 
 /**
  * Computes the best split using the Information Gain measure.
  */
-abstract class ComputeSplit extends ((Data, Int) => Split)
+private [rf] abstract class ComputeSplit extends ((Data, Int) => Split)
 
 object ComputeSplit {
   val LOG2 = math.log(2.0)
 }
 
-class DefaultComputeSplit extends ComputeSplit {
+private [rf] class DefaultComputeSplit extends ComputeSplit {
   override def apply(data: Data, feature: Int): Split = {
     if (!data.metainfo.categorical(feature)) {
       val values = data.values(feature)
@@ -66,7 +66,7 @@ class DefaultComputeSplit extends ComputeSplit {
   }
 }
 
-object DefaultComputeSplit {
+private [rf] object DefaultComputeSplit {
   /**
    * Computes the split for a CATEGORICAL attribute.
    */
@@ -111,14 +111,14 @@ object DefaultComputeSplit {
  *
  * This class can be used when the criterion variable is the categorical attribute.
  */
-class ClassificationComputeSplit extends ComputeSplit {
+private [rf] class ClassificationComputeSplit extends ComputeSplit {
   override def apply(data: Data, feature: Int): Split = {
     if (data.metainfo.categorical(feature)) ClassificationComputeSplit.categoricalSplit(data, feature)
     else ClassificationComputeSplit.numericalSplit(data, feature)
   }
 }
 
-object ClassificationComputeSplit {
+private [rf] object ClassificationComputeSplit {
   /**
    * Computes the split for a CATEGORICAL attribute.
    */
@@ -183,8 +183,11 @@ object ClassificationComputeSplit {
       DataUtils.dec(countGreater, counts(index))
     }
 
-    if (best == -1) throw new IllegalStateException("no best split found !")
-    else new Split(feature, bestIg, values(best))
+    if (best == -1) {
+      throw new IllegalStateException("no best split found !")
+    } else {
+      new Split(feature, bestIg, values(best))
+    }
   }
 
   /**
@@ -233,14 +236,17 @@ object ClassificationComputeSplit {
  *
  * This class can be used when the criterion variable is the numerical attribute.
  */
-class RegressionComputeSplit extends ComputeSplit {
+private [rf] class RegressionComputeSplit extends ComputeSplit {
   override def apply(data: Data, feature: Int): Split = {
-    if (data.metainfo.categorical(feature)) RegressionComputeSplit.categoricalSplit(data, feature)
-    else RegressionComputeSplit.numericalSplit(data, feature)
+    if (data.metainfo.categorical(feature)) {
+      RegressionComputeSplit.categoricalSplit(data, feature)
+    } else {
+      RegressionComputeSplit.numericalSplit(data, feature)
+    }
   }
 }
 
-object RegressionComputeSplit {
+private [rf] object RegressionComputeSplit {
   /**
    * Comparator for Instance sort
    */
@@ -302,10 +308,6 @@ object RegressionComputeSplit {
     val sortedPoints = data.points.toArray
     implicit val ordering = new PointOrdering(feature)
     Sorting.quickSort(sortedPoints)
-//    sortedPoints.foreach {point =>
-//      point.features.foreach(x => print(x + " "))
-//      println
-//    }
 
     for (point <- sortedPoints) {
       val y = point.label

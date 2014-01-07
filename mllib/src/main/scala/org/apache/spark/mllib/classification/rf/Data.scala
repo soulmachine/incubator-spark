@@ -17,17 +17,16 @@
 
 package org.apache.spark.mllib.classification.rf
 
-import scala.collection.mutable.ListBuffer
+import scala.collection.mutable
 import scala.util.Random
 
 import org.apache.spark.mllib.regression.LabeledPoint
-import scala.collection.mutable
 
 /**
- * Holds a list of vectors and their corresponding DataMetainfo. contains various operations that
+ * Holds a list of vectors and their corresponding `DataMetaInfo`. contains various operations that
  * deals with the vectors (subset, count,...)
  */
-case class Data(metainfo: DataMetaInfo, points: List[LabeledPoint]) {
+private [rf] case class Data(metainfo: DataMetaInfo, points: Array[LabeledPoint]) {
 
   def size: Int = points.size
   def isEmpty: Boolean = points.isEmpty
@@ -53,27 +52,21 @@ case class Data(metainfo: DataMetaInfo, points: List[LabeledPoint]) {
    */
   def bagging(rnd: Random): Data = {
     val dataSize = size
-    val bag = new ListBuffer[LabeledPoint]
-
-    for (i <- 0 until dataSize) {
-      bag += points(rnd.nextInt(dataSize))
+    val bag = Array.fill[LabeledPoint](dataSize) {
+      points(rnd.nextInt(dataSize))
     }
 
-    new Data(metainfo, bag.toList)
+    new Data(metainfo, bag)
   }
 
   /**
    * checks if all the vectors have identical label values
    */
   def identicalLabel(): Boolean = {
-    if (isEmpty) return true
-
-    val first = points(0).label
-    for (point <- points) {
-      if (point.label != first) return false
+    isEmpty || {
+      val first = points.head.label
+      points.tail.find(_.label != first).isEmpty
     }
-
-    true
   }
 
   /**
@@ -84,21 +77,14 @@ case class Data(metainfo: DataMetaInfo, points: List[LabeledPoint]) {
    * @return the majority label value
    */
   def majorityLabel(rnd: Random): Int = {
-    // count the frequency of each label value
     val counts = new Array[Int](metainfo.nbLabels)
-    points.foreach(point=>counts(point.label.toInt) += 1)
-
-    // find the label values that appears the most
+    points.foreach(point => counts(point.label.toInt) += 1)
     DataUtils.maxIndex(rnd, counts)
   }
 
   def entropy(): Double = {
     val counts = new Array[Int](metainfo.nbLabels)
-
-    for (point <- points) {
-      counts(point.label.toInt) += 1
-    }
-
+    points.foreach(point => counts(point.label.toInt) += 1)
     ClassificationComputeSplit.entropy(counts, size)
   }
 }
@@ -114,6 +100,6 @@ case class Data(metainfo: DataMetaInfo, points: List[LabeledPoint]) {
  * @param nbValues nbValues[i] means number of feature i's values, if feature i is numerical,
  *                 nbValues[i] equals to -1
  */
-case class DataMetaInfo(classification: Boolean, categorical: Array[Boolean],
+private [rf] case class DataMetaInfo(classification: Boolean, categorical: Array[Boolean],
     nbLabels: Int, nbValues: Array[Int]) extends Serializable
 

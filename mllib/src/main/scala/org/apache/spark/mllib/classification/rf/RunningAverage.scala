@@ -18,12 +18,12 @@
 package org.apache.spark.mllib.classification.rf
 
 /**
- * Interface for classes that can keep track of a running average of a series of numbers. One can add to or
- * remove from the series, as well as update a datum in the series. The class does not actually keep track of
- * the series of values, just its running average, so it doesn't even matter if you remove/change a value that
- * wasn't added.
+ * Interface for classes that can keep track of a running average of a series of numbers. One can
+ * add to or remove from the series, as well as update a datum in the series. The class does not
+ * actually keep track of the series of values, just its running average, so it doesn't even matter
+ * if you remove/change a value that wasn't added.
  */
-abstract class RunningAverage {
+private [rf] abstract class RunningAverage {
 
   /**
    * @param item new item to add to the running average
@@ -56,7 +56,7 @@ abstract class RunningAverage {
  * track of the series of values, just its running average, so it doesn't even matter if you
  * remove/change a value that wasn't added.
  */
-class FullRunningAverage(private var count_ : Int, private var average_ : Double)
+private [rf] class FullRunningAverage(private var count_ : Int, private var average_ : Double)
     extends RunningAverage with Serializable {
 
   def this() = this(0, Double.NaN)
