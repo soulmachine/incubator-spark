@@ -158,9 +158,6 @@ class RandomForestSuite extends FunSuite with BeforeAndAfterAll {
     // Build Forest
     val forest = buildForest(dataset)
 
-    println(forest.predict(TEST_DATA(0)))
-    println(forest.predict(TEST_DATA(1)))
-    println(forest.predict(TEST_DATA(2)))
     assert(1.0 == forest.predict(TEST_DATA(0)))
     // This one is tie-broken -- 0 is OK too
     assert(1.0 == forest.predict(TEST_DATA(1)))
