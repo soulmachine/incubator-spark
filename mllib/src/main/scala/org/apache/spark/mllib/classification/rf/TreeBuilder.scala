@@ -27,10 +27,10 @@ import org.apache.spark.mllib.regression.LabeledPoint
  * Abstract base class for TreeBuilders
  */
 abstract class TreeBuilder extends Logging {
-  
+
   /**
    * Builds a Decision tree using the training data
-   * 
+   *
    * @param rnd random-numbers generator
    * @param data training data
    * @return root Node
@@ -40,7 +40,7 @@ abstract class TreeBuilder extends Logging {
 
 /**
  * Builds a classification tree or regression tree.
- * 
+ *
  * A classification tree is built when the criterion variable is the categorical attribute.<br>
  * A regression tree is built when the criterion variable is the numerical attribute.
  */
@@ -89,7 +89,7 @@ class DecisionTreeBuilder extends TreeBuilder {
   }
   /**
    * Builds a Decision tree using the training data
-   * 
+   *
    * @param rnd random-numbers generator
    * @param data training data
    * @return root Node
@@ -98,7 +98,7 @@ class DecisionTreeBuilder extends TreeBuilder {
     if (data.isEmpty) {
       return new Leaf(Double.NaN)
     }
-    
+
     if (selected == null) {
       selected = new Array[Boolean](data.metainfo.categorical.length)
     }
@@ -113,7 +113,7 @@ class DecisionTreeBuilder extends TreeBuilder {
         m = math.ceil(e / 3.0).toInt
       }
     }
-    
+
     if (computeSplit == null) {
       if (data.metainfo.classification) {
         // classification
@@ -154,7 +154,7 @@ class DecisionTreeBuilder extends TreeBuilder {
 
       // variance is compared with minimum variance
       if ((variance / data.size) < minVariance) {
-        logDebug("variance(" + variance / data.size + ") < minVariance(" + 
+        logDebug("variance(" + variance / data.size + ") < minVariance(" +
             minVariance + ") Leaf(" + sum / data.size + ")")
         return new Leaf(sum / data.size)
       }
@@ -183,10 +183,10 @@ class DecisionTreeBuilder extends TreeBuilder {
       logDebug("ig is near to zero Leaf(" + label + ")")
       return new Leaf(label)
     }
-    
+
     logDebug("best split " + best)
 
-    val alreadySelected = selected(best.feature)
+    val alreadySelected: Boolean = selected(best.feature)
     if (alreadySelected) {
       // attribute already selected
       logWarning("attribute " + best.feature + " already selected in a parent node")
@@ -195,7 +195,7 @@ class DecisionTreeBuilder extends TreeBuilder {
     var root: Node = null
     if (!data.metainfo.categorical(best.feature)) {
       var temp: Array[Boolean] = null
-      
+
       val lesserThan = (point: LabeledPoint) => { point.features(best.feature) < best.split }
       val greaterThan = (point: LabeledPoint) => !lesserThan(point)
       val loSubset = data.subset(lesserThan)
@@ -217,7 +217,7 @@ class DecisionTreeBuilder extends TreeBuilder {
         logDebug("branch is not split Leaf(" + label + ")")
         return new Leaf(label)
       }
-      
+
       val loChild = build(rnd, loSubset)
       val hiChild = build(rnd, hiSubset)
 
@@ -264,12 +264,11 @@ class DecisionTreeBuilder extends TreeBuilder {
 
     root
   }
-  
+
   /**
    * checks if all the vectors have identical attribute values. Ignore selected attributes.
    *
-   * @return true is all the vectors are identical or the data is empty<br>
-   *         false otherwise
+   * @return true is all the vectors are identical or the data is empty, false otherwise
    */
   private def isIdentical(data: Data): Boolean = {
     if (data.isEmpty) return true
@@ -292,14 +291,14 @@ class DecisionTreeBuilder extends TreeBuilder {
 object DecisionTreeBuilder extends Logging {
   private val NO_FEATURES = new Array[Int](0)
   private val EPSILON = 1.0e-6
-  
+
   /**
    * Make a copy of the selection state of the attributes, unselect all numerical attributes
    *
    * @param selected selection state to clone
    * @return cloned selection state
    */
-  private def cloneCategoricalAttributes(metainfo: DataMetainfo, 
+  private def cloneCategoricalAttributes(metainfo: DataMetaInfo,
       selected: Array[Boolean]): Array[Boolean] = {
     val cloned = new Array[Boolean](selected.length)
 
@@ -331,7 +330,7 @@ object DecisionTreeBuilder extends Logging {
       return NO_FEATURES
     }
 
-    val result: Array[Int]  = if (nbNonSelected <= m) new Array[Int](nbNonSelected) 
+    val result: Array[Int]  = if (nbNonSelected <= m) new Array[Int](nbNonSelected)
                               else new Array[Int](m)
     if (nbNonSelected <= m) {  // return all non selected attributes
       var index = 0

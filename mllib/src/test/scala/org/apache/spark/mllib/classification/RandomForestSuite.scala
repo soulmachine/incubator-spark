@@ -23,8 +23,8 @@ import org.scalatest.BeforeAndAfterAll
 import org.scalatest.FunSuite
 import org.apache.spark.SparkContext
 import org.apache.spark.mllib.regression.LabeledPoint
-import org.apache.spark.mllib.classification.rf.{Node, Data, DataMetainfo}
-import org.apache.spark.mllib.classification.rf.{DecisionTreeBuilder, RandomForest, RandomForestModel}
+import org.apache.spark.mllib.classification.rf.{Node, Data, DataMetaInfo}
+import org.apache.spark.mllib.classification.rf.{DecisionTreeBuilder, RandomForestModel}
 import org.apache.spark.mllib.classification.rf.DefaultComputeSplit
 import org.apache.spark.mllib.classification.rf.ClassificationComputeSplit
 import org.apache.spark.mllib.classification.rf.RegressionComputeSplit
@@ -35,7 +35,7 @@ class RandomForestSuite extends FunSuite with BeforeAndAfterAll {
   @transient private val EPSILON = 0.000001
   @transient private var sc: SparkContext = _
   @transient private val rnd = new Random()
-  val metainfo = DataMetainfo(true, Array(true, false, false, true), 2, Array(3, -1,-1,2))
+  val metaInfo = DataMetaInfo(classification = true, Array(true, false, false, true), 2, Array(3, -1,-1,2))
   @transient private val TRAIN_DATA = List(LabeledPoint(1,Array(1,85.0,85,0)),
     LabeledPoint(1,Array(1,80.0,90,1)), LabeledPoint(0,Array(2,83.0,86,0)),
     LabeledPoint(0,Array(0,70.0,96,0)), LabeledPoint(0,Array(0,68.0,80,0)), LabeledPoint(1,Array(0,65.0,70,1)),
@@ -54,11 +54,11 @@ class RandomForestSuite extends FunSuite with BeforeAndAfterAll {
     sc.stop()
     System.clearProperty("spark.driver.port")
   }
-  
+
   private def generateTrainingDataA(): Array[Data] = {
-    val data = Data(metainfo, TRAIN_DATA)
+    val data = Data(metaInfo, TRAIN_DATA)
     val points = Array.fill(3)(new ListBuffer[LabeledPoint])
-    
+
     for (point <- data.points) {
       if (point.features(0) == 0.0d) {
         points(0) += point
@@ -66,12 +66,12 @@ class RandomForestSuite extends FunSuite with BeforeAndAfterAll {
         points(1) += point
       }
     }
-    points.map(p => new Data(metainfo, p.toList))
+    points.map(p => new Data(metaInfo, p.toList))
   }
 
   private def generateTrainingDataB(): Array[Data] = {
-    val datas = new Array[Data](3)
-    val metainfo = DataMetainfo(false, Array(true, false), -1, Array(3, -1))
+    val dataset = new Array[Data](3)
+    val metaInfo = DataMetaInfo(classification = false, Array(true, false), -1, Array(3, -1))
     // Training data
     var trainData = new Array[LabeledPoint](20)
     for (i <- 0 until trainData.length) {
@@ -79,7 +79,7 @@ class RandomForestSuite extends FunSuite with BeforeAndAfterAll {
                      else if (i % 3 == 1) LabeledPoint(40-i, Array(1.0, i+20))
                      else                 LabeledPoint(i+20, Array(2.0, i+20))
     }
-    datas(0) = Data(metainfo, trainData.toList)
+    dataset(0) = Data(metaInfo, trainData.toList)
 
     // Training data
     trainData = new Array[LabeledPoint](20)
@@ -87,18 +87,18 @@ class RandomForestSuite extends FunSuite with BeforeAndAfterAll {
       trainData(i) = if (i % 2 == 0) LabeledPoint(i+10, Array(0.0, 50-i))
                      else LabeledPoint(50-i, Array(1.0, i+10))
     }
-    datas(1) = Data(metainfo, trainData.toList)
+    dataset(1) = Data(metaInfo, trainData.toList)
 
     // Training data
     trainData = new Array[LabeledPoint](10)
     for (i <- 0 until trainData.length) {
       trainData(i) = LabeledPoint(i+20, Array(0.0, 40-i))
     }
-    datas(2) = Data(metainfo, trainData.toList)
+    dataset(2) = Data(metaInfo, trainData.toList)
 
-    datas
+    dataset
   }
-  
+
   private def buildForest(datas: Array[Data]): RandomForestModel = {
     val trees = new Array[Node](datas.length)
     for (i <- 0 until datas.length) {
@@ -111,50 +111,50 @@ class RandomForestSuite extends FunSuite with BeforeAndAfterAll {
     }
     new RandomForestModel(trees, datas(0).metainfo)
   }
-  
+
   test ("ClassificationComputeSplit") {
     val ref = new DefaultComputeSplit()
     val opt = new ClassificationComputeSplit()
-    val data = Data(metainfo, TRAIN_DATA)
-    
+    val data = Data(metaInfo, TRAIN_DATA)
+
     for (f <- 0 until data.metainfo.categorical.length) {
       val expected = ref(data, f)
       val actual = opt(data, f)
-      
-      if (!metainfo.categorical(f)) {
+
+      if (!metaInfo.categorical(f)) {
           assert(math.abs(expected.split - actual.split) < EPSILON)
       }
     }
   }
-  
+
   test ("RegressionComputeSplit") {
-    val datas = generateTrainingDataB()
+    val dataset = generateTrainingDataB()
 
     val computeSplit = new RegressionComputeSplit()
-    var split = computeSplit(datas(0), 1)
+    var split = computeSplit(dataset(0), 1)
     assert(math.abs(180.0 - split.ig) < EPSILON)
     assert(math.abs(38.0 - split.split) < EPSILON)
-    
+
     val lesserThan = (point: LabeledPoint) => { point.features(1) < 38.0 }
-    split = computeSplit(datas(0).subset(lesserThan), 1)
+    split = computeSplit(dataset(0).subset(lesserThan), 1)
     assert(math.abs(76.5 - split.ig) < EPSILON)
     assert(math.abs(21.5 - split.split) < EPSILON)
 
-    split = computeSplit(datas(1), 0)
+    split = computeSplit(dataset(1), 0)
     assert(math.abs(2205.0 - split.ig) < EPSILON)
     assert(split.split.isNaN)
-    
+
     val equal = (point: LabeledPoint) => { point.features(0) == 0.0 }
-    split = computeSplit(datas(1).subset(equal), 1)
+    split = computeSplit(dataset(1).subset(equal), 1)
     assert(math.abs(250.0 - split.ig) < EPSILON)
     assert(math.abs(41.0 - split.split) < EPSILON)
   }
-  
+
   test("local Random forest for classification") {
     // Training data
-    val datas = generateTrainingDataA()
+    val dataset = generateTrainingDataA()
     // Build Forest
-    val forest = buildForest(datas)
+    val forest = buildForest(dataset)
 
     assert(math.abs(1.0 - forest.predict(TEST_DATA(0))) < EPSILON)
     // This one is tie-broken -- 1 is OK too

@@ -17,18 +17,18 @@
 
 package org.apache.spark.mllib.classification.rf
 
-import scala.collection.mutable.HashSet
 import scala.collection.mutable.ListBuffer
 import scala.util.Random
 
 import org.apache.spark.mllib.regression.LabeledPoint
+import scala.collection.mutable
 
 /**
- * Holds a list of vectors and their corresponding DataMetainfo. contains various operations that 
+ * Holds a list of vectors and their corresponding DataMetainfo. contains various operations that
  * deals with the vectors (subset, count,...)
  */
-case class Data(metainfo: DataMetainfo, points: List[LabeledPoint]) {
-  
+case class Data(metainfo: DataMetaInfo, points: List[LabeledPoint]) {
+
   def size: Int = points.size
   def isEmpty: Boolean = points.isEmpty
 
@@ -36,29 +36,29 @@ case class Data(metainfo: DataMetainfo, points: List[LabeledPoint]) {
    * finds all distinct values of a given feature
    */
   def values(feature: Int): Array[Double] = {
-    val result = new HashSet[Double]
+    val result = new mutable.HashSet[Double]
     points.foreach(result += _.features(feature))
     result.toArray
   }
-  
+
   /**
    * @return the subset from this data that matches the given condition
    */
   def subset(condition: LabeledPoint => Boolean): Data = {
     new Data(metainfo, points.filter(condition))
   }
-  
+
   /**
-   * if data has N cases, sample N cases at random -but with replacement.
+   * If data has N cases, sample N cases at random -but with replacement.
    */
   def bagging(rnd: Random): Data = {
-    val datasize = size
+    val dataSize = size
     val bag = new ListBuffer[LabeledPoint]
 
-    for (i <- 0 until datasize) {
-      bag += points(rnd.nextInt(datasize))
+    for (i <- 0 until dataSize) {
+      bag += points(rnd.nextInt(dataSize))
     }
-    
+
     new Data(metainfo, bag.toList)
   }
 
@@ -75,10 +75,10 @@ case class Data(metainfo: DataMetainfo, points: List[LabeledPoint]) {
 
     true
   }
-  
-   /**
+
+  /**
    * finds the majority label, breaking ties randomly.
-   * 
+   *
    * This method can be used when the criterion variable is the categorical attribute.
    *
    * @return the majority label value
@@ -87,35 +87,33 @@ case class Data(metainfo: DataMetainfo, points: List[LabeledPoint]) {
     // count the frequency of each label value
     val counts = new Array[Int](metainfo.nbLabels)
     points.foreach(point=>counts(point.label.toInt) += 1)
-    
+
     // find the label values that appears the most
-    DataUtils.maxindex(rnd, counts)
+    DataUtils.maxIndex(rnd, counts)
   }
-  
+
   def entropy(): Double = {
-    val invDataSize = 1.0 / size
     val counts = new Array[Int](metainfo.nbLabels)
-    
+
     for (point <- points) {
       counts(point.label.toInt) += 1
     }
-    
+
     ClassificationComputeSplit.entropy(counts, size)
   }
 }
 
-
 /**
- * The data metainfo of training data.
+ * The data meta info of training data.
  *
  * @param classification Whether the label is categorical or numerical.
- * @param categorical Whether the label is categorical or numerical, true if categorical, 
- *                    false if numerical.when one feature is categorical, the corresponding 
+ * @param categorical Whether the label is categorical or numerical, true if categorical,
+ *                    false if numerical.when one feature is categorical, the corresponding
  *                    value is true; when numerical, false.
  * @param nbLabels number of label values
  * @param nbValues nbValues[i] means number of feature i's values, if feature i is numerical,
  *                 nbValues[i] equals to -1
  */
-case class DataMetainfo(classification: Boolean, categorical: Array[Boolean], 
+case class DataMetaInfo(classification: Boolean, categorical: Array[Boolean],
     nbLabels: Int, nbValues: Array[Int]) extends Serializable
 

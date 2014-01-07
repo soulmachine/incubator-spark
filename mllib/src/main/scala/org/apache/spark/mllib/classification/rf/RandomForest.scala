@@ -18,24 +18,17 @@
 package org.apache.spark.mllib.classification.rf
 
 import scala.util.Random
-import scala.math.signum
 
-import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
-import org.apache.spark.mllib.optimization._
 import org.apache.spark.mllib.regression._
-import org.apache.spark.mllib.util.MLUtils
-import org.apache.spark.mllib.util.DataValidators
-
-import org.jblas.DoubleMatrix
 
 /**
  * Builds a random forest using partial data. Each worker uses only the data given by its partition.
  *
- * @param metainfo Metainfo of trainning data.
+ * @param metaInfo MetaInfo of training data.
  * @param nbTrees Number of trees to build.
  */
-class RandomForest(private val metainfo: DataMetainfo, private val nbTrees: Int) 
+class RandomForest(private val metaInfo: DataMetaInfo, private val nbTrees: Int)
     extends Serializable{
   /**
    * Run the algorithm with the configured parameters on an input RDD of LabeledPoint .
@@ -43,21 +36,21 @@ class RandomForest(private val metainfo: DataMetainfo, private val nbTrees: Int)
   def run(input: RDD[LabeledPoint]) : RandomForestModel = {
     val numPartitions = input.partitions.length
     val rnd = new Random()
-    
+
     val trees = input.mapPartitionsWithIndex { (index, iterator) =>
-      val data = Data(metainfo, iterator.toList)
+      val data = Data(metaInfo, iterator.toList)
       val builder: TreeBuilder = new DecisionTreeBuilder()
       val numTrees = nbTreesOfPartition(numPartitions, index)
-      
+
       val trees = new Array[Node](numTrees)
       for (i <- 0 until numTrees) {
         trees(i) = builder.build(rnd, data.bagging(rnd))
       }
-      
+
       trees.toIterator
     }
-    
-    new RandomForestModel(trees.collect(), metainfo)
+
+    new RandomForestModel(trees.collect(), metaInfo)
   }
 
   /**
@@ -83,13 +76,13 @@ class RandomForest(private val metainfo: DataMetainfo, private val nbTrees: Int)
 
 object RandomForest {
   /**
-   * Train a Random Forest model given an RDD of (label, features) pairs. 
+   * Train a Random Forest model given an RDD of (label, features) pairs.
    *
-   * @param input RDD of (label, array of features) pairs, for categorical features, 
+   * @param input RDD of (label, array of features) pairs, for categorical features,
    *        they should be converted to Integers, starting from 0.
    * @param classification Whether the label is categorical or numerical.
-   * @param categorical Whether the label is categorical or numerical, true if categorical, 
-   *                    false if numerical.when one feature is categorical, the corresponding 
+   * @param categorical Whether the label is categorical or numerical, true if categorical,
+   *                    false if numerical.when one feature is categorical, the corresponding
    *                    value is true; when numerical, false.
    * @param nbLabels Number of label values, just for classification problem
    * @param nbValues nbValues[i] means number of feature i's values, if feature i is numerical,
@@ -103,7 +96,7 @@ object RandomForest {
       nbLabels: Int = -1,
       nbValues: Array[Int] = null,
       nbTrees: Int = -1) : RandomForestModel = {
-    train(input, new DataMetainfo(classification, categorical, nbLabels, nbValues), nbTrees)
+    train(input, new DataMetaInfo(classification, categorical, nbLabels, nbValues), nbTrees)
   }
 
   /**
@@ -114,6 +107,7 @@ object RandomForest {
    * @param metainfo Metainfo of training data
    * @param nbTrees Number of trees to build, should be greater than number of partitions.
    */
-  def train(input: RDD[LabeledPoint], metainfo: DataMetainfo, nbTrees: Int): RandomForestModel =
+  def train(input: RDD[LabeledPoint], metainfo: DataMetaInfo, nbTrees: Int): RandomForestModel = {
     new RandomForest(metainfo, nbTrees).run(input)
+  }
 }

@@ -17,8 +17,6 @@
 
 package org.apache.spark.mllib.classification.rf
 
-import java.util.Locale
-
 import scala.util.Sorting
 import scala.math.Ordering
 import org.apache.spark.mllib.regression.LabeledPoint
@@ -26,13 +24,13 @@ import org.apache.spark.mllib.regression.LabeledPoint
 
 /**
  * Contains enough information to identify each split.
- * 
+ *
  * @param feature the feature to split for
  * @param ig Information Gain of the split
  * @param split split value for NUMERICAL features
  */
 case class Split(feature: Int, ig: Double, split: Double = Double.NaN) {
-  override def toString(): String = "feature: " + feature + ", ig: " + ig + ", split: " + split
+  override def toString: String = "feature: " + feature + ", ig: " + ig + ", split: " + split
 }
 
 /**
@@ -50,7 +48,7 @@ class DefaultComputeSplit extends ComputeSplit {
       val values = data.values(feature)
       var bestIg = -1.0
       var bestSplit = 0.0
-      
+
       for (value <- values) {
         val ig = DefaultComputeSplit.numericalIg(data, feature, value)
         if (ig > bestIg) {
@@ -58,11 +56,11 @@ class DefaultComputeSplit extends ComputeSplit {
           bestSplit = value
         }
       }
-      
+
       new Split(feature, bestIg, bestSplit)
     } else {
       val ig = DefaultComputeSplit.categoricalIg(data, feature)
-      
+
       new Split(feature, ig)
     }
   }
@@ -77,40 +75,40 @@ object DefaultComputeSplit {
     val hy = data.entropy() // H(Y)
     var hyx = 0.0 // H(Y|X)
     val invDataSize = 1.0 / data.size
-    
+
     for (value <- values) {
       val equal = (point: LabeledPoint) => { point.features(feature) == value }
-      val subset = data.subset(equal);
+      val subset = data.subset(equal)
       hyx += subset.size * invDataSize * subset.entropy()
     }
-    
+
     hy - hyx
   }
-  
+
   /**
    * Computes the best split for a NUMERICAL attribute.
    */
   private def numericalIg(data: Data, feature: Int, split: Double): Double = {
     var hy = data.entropy()
     val invDataSize = 1.0 / data.size
-    
+
     val lesserThan = (point: LabeledPoint) => { point.features(feature) < split }
     val greaterThan = (point: LabeledPoint) => !lesserThan(point)
     // LO subset
-    var subset = data.subset(lesserThan);
+    var subset = data.subset(lesserThan)
     hy -= subset.size * invDataSize * subset.entropy()
-    
+
     // HI subset
-    subset = data.subset(greaterThan);
+    subset = data.subset(greaterThan)
     hy -= subset.size * invDataSize * subset.entropy()
-    
+
     hy
   }
 }
 
 /**
- * Classification problem implementation of ComputeSplit. 
- * 
+ * Classification problem implementation of ComputeSplit.
+ *
  * This class can be used when the criterion variable is the categorical attribute.
  */
 class ClassificationComputeSplit extends ComputeSplit {
@@ -138,13 +136,13 @@ object ClassificationComputeSplit {
 
     for (index <- 0 until values.length) {
       val size = counts(index).sum
-      hdf += size * invDataSize * entropy(counts(index), size);
+      hdf += size * invDataSize * entropy(counts(index), size)
     }
 
     val ig = hd - hdf
     new Split(feature, ig)
   }
-  
+
   /**
    * Computes the best split for a NUMERICAL attribute.
    */
@@ -160,7 +158,7 @@ object ClassificationComputeSplit {
     val dataSize = data.points.size
     val invDataSize = 1.0 / dataSize
     val hd = entropy(countGreater, dataSize)  // H(D)
-    
+
     var best = -1
     var bestIg = -1.0
 
@@ -174,11 +172,11 @@ object ClassificationComputeSplit {
 
       // instance with attribute value >= values[index]
       size = countGreater.sum
-      ig -= size * invDataSize * entropy(countGreater, size);
+      ig -= size * invDataSize * entropy(countGreater, size)
 
       if (ig > bestIg) {
-        bestIg = ig;
-        best = index;
+        bestIg = ig
+        best = index
       }
 
       DataUtils.add(countLess, counts(index))
@@ -188,7 +186,7 @@ object ClassificationComputeSplit {
     if (best == -1) throw new IllegalStateException("no best split found !")
     else new Split(feature, bestIg, values(best))
   }
-  
+
   /**
    * Computes the Entropy
    *
@@ -210,7 +208,7 @@ object ClassificationComputeSplit {
 
     h
   }
-  
+
   /**
    * Return the sorted list of distinct values for the given attribute
    */
@@ -219,7 +217,7 @@ object ClassificationComputeSplit {
     Sorting.quickSort(values)
     values
   }
-  
+
   /** compute frequencies. */
   private def computeFrequencies(data: Data, feature: Int, values: Array[Double],
       counts: Array[Array[Int]], countAll: Array[Int]) {
@@ -229,10 +227,10 @@ object ClassificationComputeSplit {
     }
   }
 }
-   
+
 /**
- * Regression problem implementation of ComputeSplit. 
- * 
+ * Regression problem implementation of ComputeSplit.
+ *
  * This class can be used when the criterion variable is the numerical attribute.
  */
 class RegressionComputeSplit extends ComputeSplit {
@@ -247,10 +245,10 @@ object RegressionComputeSplit {
    * Comparator for Instance sort
    */
   private class PointOrdering(private val feature: Int) extends Ordering[LabeledPoint] {
-    def compare(p1: LabeledPoint, p2: LabeledPoint): Int = 
+    def compare(p1: LabeledPoint, p2: LabeledPoint): Int =
       p1.features(feature).compare(p2.features(feature))
   }
-  
+
   /**
    * Computes the split for a CATEGORICAL attribute.
    */
@@ -264,23 +262,23 @@ object RegressionComputeSplit {
       // computes the variance
       val x = point.features(feature).toInt
       val y = point.label
-      if (ra(x).getCount() == 0) {
+      if (ra(x).count == 0) {
         ra(x).addItem(y)
         sk(x) = 0.0
       } else {
-        val mean = ra(x).getAverage()
+        val mean = ra(x).average
         ra(x).addItem(y)
-        sk(x) += (y - mean) * (y - ra(x).getAverage())
+        sk(x) += (y - mean) * (y - ra(x).average)
       }
 
       // total variance
-      if (totalRa.getCount() == 0) {
+      if (totalRa.count == 0) {
         totalRa.addItem(y)
         totalSk = 0.0
       } else {
-        val mean = totalRa.getAverage()
+        val mean = totalRa.average
         totalRa.addItem(y)
-        totalSk += (y - mean) * (y - totalRa.getAverage())
+        totalSk += (y - mean) * (y - totalRa.average)
       }
     }
 
@@ -292,14 +290,14 @@ object RegressionComputeSplit {
 
     new Split(feature, ig)
   }
-  
+
   /**
    * Computes the best split for a NUMERICAL attribute.
    */
   private def numericalSplit(data: Data, feature: Int): Split = {
     val ra = Array.fill(2)(new FullRunningAverage())  // less, greater
     val sk = new Array[Double](2)   // less, greater
-    
+
     // points sort
     val sortedPoints = data.points.toArray
     implicit val ordering = new PointOrdering(feature)
@@ -308,20 +306,20 @@ object RegressionComputeSplit {
 //      point.features.foreach(x => print(x + " "))
 //      println
 //    }
-    
+
     for (point <- sortedPoints) {
       val y = point.label
-      if (ra(1).getCount() == 0) {
+      if (ra(1).count == 0) {
         ra(1).addItem(y)
         sk(1) = 0.0
       } else {
-        val mean = ra(1).getAverage()
+        val mean = ra(1).average
         ra(1).addItem(y)
-        sk(1) += (y - mean) * (y - ra(1).getAverage())
+        sk(1) += (y - mean) * (y - ra(1).average)
       }
     }
-    
-    var totalSk = sk(1)
+
+    val totalSk = sk(1)
 
     // find the best split point
     var split = Double.NaN
@@ -334,7 +332,7 @@ object RegressionComputeSplit {
       val y = point.label
 
       if (point.features(feature) > preSplit) {
-        val curVal = sk(0) / ra(0).getCount() + sk(1) / ra(1).getCount()
+        val curVal = sk(0) / ra(0).count + sk(1) / ra(1).count
         if (curVal < bestVal) {
           bestVal = curVal
           bestSk = sk(0) + sk(1)
@@ -343,18 +341,18 @@ object RegressionComputeSplit {
       }
 
       // computes the variance
-      if (ra(0).getCount() == 0) {
+      if (ra(0).count == 0) {
         ra(0).addItem(y)
         sk(0) = 0.0
       } else {
-        val mean = ra(0).getAverage()
+        val mean = ra(0).average
         ra(0).addItem(y)
-        sk(0) += (y - mean) * (y - ra(0).getAverage())
+        sk(0) += (y - mean) * (y - ra(0).average)
       }
 
-      val mean = ra(1).getAverage()
+      val mean = ra(1).average
       ra(1).removeItem(y)
-      sk(1) -= (y - mean) * (y - ra(1).getAverage())
+      sk(1) -= (y - mean) * (y - ra(1).average)
 
       preSplit = point.features(feature)
     }

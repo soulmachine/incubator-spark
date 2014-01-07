@@ -22,7 +22,7 @@ import scala.collection.mutable.ListBuffer
 
 
 object DataUtils {
-  
+
   /**
    * foreach i : array1[i] += array2[i]
    */
@@ -32,7 +32,7 @@ object DataUtils {
       array1(index) += array2(index)
     }
   }
-  
+
   /**
    * foreach i : array1[i] -= array2[i]
    */
@@ -42,27 +42,27 @@ object DataUtils {
       array1(index) -= array2(index)
     }
   }
-  
+
   /**
    * return the index of the maximum of the array, breaking ties randomly
-   * 
+   *
    * @param rnd used to break ties
    * @return index of the maximum
    */
-  def maxindex(rnd: Random, values: Array[Int]): Int = {
+  def maxIndex(rnd: Random, values: Array[Int]): Int = {
     var max = 0
     val maxIndices = new ListBuffer[Int]
-    
+
     for (index <- 0 until values.length) {
       if (values(index) > max) {
-        max = values(index);
+        max = values(index)
         maxIndices.clear()
         maxIndices += index
       } else if (values(index) == max) {
         maxIndices += index
       }
     }
-    
+
     if (maxIndices.length > 1) maxIndices(rnd.nextInt(maxIndices.length)) else maxIndices(0)
   }
 }
