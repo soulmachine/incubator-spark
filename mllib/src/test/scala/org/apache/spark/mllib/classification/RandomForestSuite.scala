@@ -179,6 +179,7 @@ class RandomForestSuite extends FunSuite with BeforeAndAfterAll {
       val forest = RandomForest.train(dataRDD, seed, metaInfo, 10)
 
       if (forest.predict(TEST_DATA(0)) != 1) error += 1
+      if (forest.predict(TEST_DATA(1)) != 0) error += 1
       if (forest.predict(TEST_DATA(2)) != 1) error += 1
     }
     assert(error < 2 * total * 0.1)   // error rate must be lesser than 10%
