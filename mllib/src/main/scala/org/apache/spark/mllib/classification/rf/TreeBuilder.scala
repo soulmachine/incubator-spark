@@ -268,7 +268,7 @@ class DecisionTreeBuilder extends TreeBuilder {
   /**
    * checks if all the vectors have identical attribute values. Ignore selected attributes.
    *
-   * @return true is all the vectors are identical or the data is empty, false otherwise
+   * @return `true` is all the vectors are identical or the data is empty, false otherwise
    */
   private def isIdentical(data: Data): Boolean = {
     if (data.isEmpty) return true

@@ -113,8 +113,11 @@ private [rf] object DefaultComputeSplit {
  */
 private [rf] class ClassificationComputeSplit extends ComputeSplit {
   override def apply(data: Data, feature: Int): Split = {
-    if (data.metainfo.categorical(feature)) ClassificationComputeSplit.categoricalSplit(data, feature)
-    else ClassificationComputeSplit.numericalSplit(data, feature)
+    if (data.metainfo.categorical(feature)) {
+      ClassificationComputeSplit.categoricalSplit(data, feature)
+    } else {
+      ClassificationComputeSplit.numericalSplit(data, feature)
+    }
   }
 }
 
