@@ -185,6 +185,6 @@ class RandomForestSuite extends FunSuite with BeforeAndAfterAll {
       if (forest.predict(TEST_DATA(2)) != 1) error += 1
     }
 
-    assert(error < 2 * total * 0.1)   // error rate must be lesser than 10%
+    assert(error < 3 * total * 0.1)   // error rate must be lesser than 10%
   }
 }
