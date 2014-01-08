@@ -31,46 +31,21 @@ import org.apache.spark.mllib.regression._
  */
 class RandomForest(private val metaInfo: DataMetaInfo, private val nbTrees: Int, seed: Int)
     extends Serializable{
+
   /**
    * Run the algorithm with the configured parameters on an input RDD of LabeledPoint .
    */
-  def run(input: RDD[LabeledPoint]) : RandomForestModel = {
-    val numPartitions = input.partitions.length
-
-    val trees = input.mapPartitionsWithIndex { (index, iterator) =>
-      val rnd = new Random(seed)
-      val data = Data(metaInfo, iterator.toArray)
-      val builder = new DecisionTreeBuilder()
-      val numTrees = nbTreesOfPartition(numPartitions, index)
-
-      val trees = new Array[Node](numTrees)
-      for (i <- 0 until numTrees) {
-        trees(i) = builder.build(rnd, data.bagging(rnd))
-      }
-
-      trees.toIterator
+  def run(input: RDD[LabeledPoint]): RandomForestModel = {
+    val trees = Array.fill[Node](nbTrees) {
+      input.sample(withReplacement = true, 1.0, seed).coalesce(1).mapPartitions { iterator =>
+        val rnd = new Random(seed)
+        val data = Data(metaInfo, iterator.toArray)
+        val tree = new DecisionTreeBuilder().build(rnd, data)
+        List(tree).iterator
+      }.first()
     }
 
-    new RandomForestModel(trees.collect(), metaInfo, seed)
-  }
-
-  /**
-   * Compute the number of trees for a given partition. The first partition (0) may be longer than
-   * the rest of partition because of the remainder.
-   *
-   * @param nbPartitions total number of partitions
-   * @param partition partition to compute the number of trees for
-   */
-  def nbTreesOfPartition(nbPartitions: Int, partition: Int): Int = {
-    var result = nbTrees / nbPartitions
-    // if nbTrees is less than nbPartitions, each partition at least builds one tree
-    if (result <= 0) result = 1
-    else {
-      if (partition == 0) {
-        result += nbTrees - result * nbPartitions
-      }
-    }
-    result
+    new RandomForestModel(trees, metaInfo, seed)
   }
 }
 
