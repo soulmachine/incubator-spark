@@ -173,18 +173,13 @@ class RandomForestSuite extends FunSuite with BeforeAndAfterAll {
   test("Spark Random forest for classification") {
     val dataset = generateTrainingDataA()
     val data = dataset(0).points ++ dataset(1).points
-    val dataRDD  = sc.parallelize(data ++ data, 2)
+    val dataRDD  = sc.parallelize(data, 2)
 
-    val total = 100
-    var error = 0
-    for (i <- 0 until total) {
-      val forest = RandomForest.train(dataRDD, seed, metaInfo, 10)
+    val forest = RandomForest.train(dataRDD, seed, metaInfo, 10)
 
-      if (forest.predict(TEST_DATA(0)) != 1) error += 1
-      if (forest.predict(TEST_DATA(1)) != 0) error += 1
-      if (forest.predict(TEST_DATA(2)) != 1) error += 1
-    }
-
-    assert(error < 3 * total * 0.1)   // error rate must be lesser than 10%
+    assert(1.0 == forest.predict(TEST_DATA(0)))
+    // This one is tie-broken -- 0 is OK too
+    assert(0.0 == forest.predict(TEST_DATA(1)))
+    assert(1.0 == forest.predict(TEST_DATA(2)))
   }
 }
