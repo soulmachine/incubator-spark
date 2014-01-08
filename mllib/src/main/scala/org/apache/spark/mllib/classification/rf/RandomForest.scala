@@ -26,23 +26,26 @@ import org.apache.spark.mllib.regression._
  * Builds a random forest using partial data. Each worker uses only the data given by its partition.
  *
  * @param metaInfo MetaInfo of training data.
- * @param nbTrees Number of trees to build.
  * @param seed Random seed.
  */
-class RandomForest(private val metaInfo: DataMetaInfo, private val nbTrees: Int, seed: Int)
+class RandomForest(private val metaInfo: DataMetaInfo, seed: Int)
     extends Serializable{
 
   /**
    * Run the algorithm with the configured parameters on an input RDD of LabeledPoint .
    */
-  def run(input: RDD[LabeledPoint]): RandomForestModel = {
+  def run(input: RDD[LabeledPoint], nbTrees: Int, m: Int, minSplitNum: Int): RandomForestModel = {
     val rnd = new Random(seed)
     val seeds = Array.fill(nbTrees)(rnd.nextInt())
     val trees = Array.tabulate[RDD[Node]](nbTrees) { i =>
       input.sample(withReplacement = true, 1.0, seeds(i)).coalesce(1).mapPartitions { iterator =>
-        val rnd = new Random(seed)
+        val rnd = new Random(seeds(i))
         val data = Data(metaInfo, iterator.toArray)
-        val tree = new DecisionTreeBuilder().build(rnd, data)
+        val builder = new DecisionTreeBuilder()
+        builder.setM(m)
+        builder.setMinSplitNum(minSplitNum)
+        val tree = builder.build(rnd, data)
+
         List(tree).iterator
       }
     }.reduce(_ ++ _)
@@ -66,32 +69,29 @@ object RandomForest {
    * @param nbValues nbValues[i] means number of feature i's values, if feature i is numerical,
    *                 nbValues[i] is -1
    * @param nbTrees Number of trees to build, should be greater than number of partitions.
+   * @param m number of attributes to select randomly at each node, default is sqrt(dimension)
+   * @param minSplitNum minimum number for split, default is 2
    */
   def train(
       input: RDD[LabeledPoint],
       seed: Int,
       classification: Boolean,
       categorical: Array[Boolean],
-      nbLabels: Int = -1,
-      nbValues: Array[Int] = null,
-      nbTrees: Int = -1) : RandomForestModel = {
-    train(input, seed, new DataMetaInfo(classification, categorical, nbLabels, nbValues), nbTrees)
+      nbLabels: Int,
+      nbValues: Array[Int],
+      nbTrees: Int,
+      m: Int = 0,
+      minSplitNum: Int = 0) : RandomForestModel = {
+    train(input, seed, new DataMetaInfo(classification, categorical, nbLabels, nbValues), nbTrees, m, minSplitNum)
   }
 
-  /**
-   * Train a Random Forest model given an RDD of (label, features) pairs.
-   *
-   * @param input RDD of (label, array of features) pairs, for categorical features,
-   *        they should be converted to Integers, starting from 0.
-   * @param seed seed Random seed
-   * @param metaInfo Meta info of training data
-   * @param nbTrees Number of trees to build, should be greater than number of partitions.
-   */
   private[classification] def train(
        input: RDD[LabeledPoint],
        seed: Int,
        metaInfo: DataMetaInfo,
-       nbTrees: Int): RandomForestModel = {
-    new RandomForest(metaInfo, nbTrees, seed).run(input)
+       nbTrees: Int,
+       m: Int,
+       minSplitNum: Int): RandomForestModel = {
+    new RandomForest(metaInfo, seed).run(input, nbTrees, m, minSplitNum)
   }
 }

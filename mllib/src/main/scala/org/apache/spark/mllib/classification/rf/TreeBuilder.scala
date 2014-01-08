@@ -104,7 +104,7 @@ class DecisionTreeBuilder extends TreeBuilder {
     }
     if (m == 0) {
       // set default m
-      val e = data.metainfo.categorical.length - 1
+      val e = data.metainfo.categorical.length
       if (data.metainfo.classification) {
         // classification
         m = math.ceil(math.sqrt(e)).toInt

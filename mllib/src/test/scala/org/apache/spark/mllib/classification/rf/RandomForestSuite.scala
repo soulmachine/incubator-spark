@@ -53,9 +53,9 @@ class RandomForestSuite extends FunSuite with BeforeAndAfterAll {
     LabeledPoint(1, Array(0, 71.0, 91, 1)))
 
   @transient private val TEST_DATA = Array(
-    Array(1.0, 70, 96, 1),
-    Array(2.0, 64, 65, 1),
-    Array(0.0, 75, 90, 1))
+    Array(0, 70.0, 96, 1),
+    Array(2, 64.0, 65, 1),
+    Array(1, 75.0, 90, 1))
 
   override def beforeAll() {
     sc = new SparkContext("local", "test")
@@ -114,7 +114,7 @@ class RandomForestSuite extends FunSuite with BeforeAndAfterAll {
     val trees = Array.tabulate[Node](dataset.length) { i =>
       val data = dataset(i)
       val builder = new DecisionTreeBuilder()
-      builder.setM(data.metainfo.categorical.length - 1)
+      builder.setM(data.metainfo.categorical.length)
       builder.setMinSplitNum(0)
       builder.build(rnd, data)
     }
@@ -164,22 +164,88 @@ class RandomForestSuite extends FunSuite with BeforeAndAfterAll {
     val dataset = generateTrainingDataA()
     val forest = buildForest(dataset)
 
+    val predictions = new Array[Array[Double]](TEST_DATA.size)
+    forest.predict(TEST_DATA, predictions)
+
+    assert(1.0 == predictions(0)(0))
+    assert(predictions(0)(1).isNaN)
+    assert(predictions(0)(2).isNaN)
+
+    assert(1.0 == predictions(1)(0))
+    assert(0.0 == predictions(1)(1))
+    assert(predictions(1)(2).isNaN)
+
+    assert(1.0 == predictions(2)(0))
+    assert(1.0 == predictions(2)(1))
+    assert(predictions(2)(2).isNaN)
+
     assert(1.0 == forest.predict(TEST_DATA(0)))
     // This one is tie-broken -- 0 is OK too
     assert(1.0 == forest.predict(TEST_DATA(1)))
     assert(1.0 == forest.predict(TEST_DATA(2)))
   }
 
+  test("local Random forest for regression") {
+    val dataset = generateTrainingDataB()
+    val forests = new Array[RandomForestModel](dataset.length)
+
+    for (i <- 0 until dataset.length) {
+      val subDataset = new Array[Data](dataset.length - 1)
+      var k = 0
+      for (j <- 0 until dataset.length) {
+        if (j != i) {
+          subDataset(k) = dataset(j)
+          k += 1
+        }
+      }
+      forests(i) = buildForest(subDataset)
+    }
+
+    var predictions = new Array[Array[Double]](dataset(0).size)
+    forests(0).predict(dataset(0).points.map(_.features), predictions)
+    assert(math.abs(20.0 - predictions(0)(0)) < EPSILON)
+    assert(math.abs(20.0 - predictions(0)(1)) < EPSILON)
+    assert(math.abs(39.0 - predictions(1)(0)) < EPSILON)
+    assert(math.abs(29.0 - predictions(1)(1)) < EPSILON)
+    assert(math.abs(37.0 - predictions(2)(0)) < EPSILON)
+    assert(math.abs(29.0 - predictions(2)(1)) < EPSILON)
+    assert(math.abs(22.0 - predictions(17)(0)) < EPSILON)
+    assert(math.abs(23.0 - predictions(17)(1)) < EPSILON)
+
+    predictions = new Array[Array[Double]](dataset(1).size)
+    forests(1).predict(dataset(1).points.map(_.features), predictions)
+    assert(math.abs(30.0 - predictions(19)(0)) < EPSILON)
+    assert(math.abs(29.0 - predictions(19)(1)) < EPSILON)
+
+    predictions = new Array[Array[Double]](dataset(2).size)
+    forests(2).predict(dataset(2).points.map(_.features), predictions)
+    assert(math.abs(29.0 - predictions(9)(0)) < EPSILON)
+    assert(math.abs(28.0 - predictions(9)(1)) < EPSILON)
+
+    assert(math.abs(20.0 - forests(0).predict(dataset(0).points(0).features)) < EPSILON)
+    assert(math.abs(34.0 - forests(0).predict(dataset(0).points(1).features)) < EPSILON)
+    assert(math.abs(33.0 - forests(0).predict(dataset(0).points(2).features)) < EPSILON)
+    assert(math.abs(22.5 - forests(0).predict(dataset(0).points(17).features)) < EPSILON)
+
+    assert(math.abs(29.5 - forests(1).predict(dataset(1).points(19).features)) < EPSILON)
+    assert(math.abs(28.5 - forests(2).predict(dataset(2).points(9).features)) < EPSILON)
+  }
+
   test("Spark Random forest for classification") {
     val dataset = generateTrainingDataA()
     val data = dataset(0).points ++ dataset(1).points
-    val dataRDD  = sc.parallelize(data, 2)
+    val dataRDD  = sc.parallelize(data ++ data, 2)  // since training data is insufficient, duplicate itself
 
-    val forest = RandomForest.train(dataRDD, seed, metaInfo, 10)
+    val iteration = 100
+    val seeds = Array.fill(iteration)(rnd.nextInt())
+    var error = 0
+    for (i <- 0 until iteration) {
+      val forest = RandomForest.train(dataRDD, seeds(i), metaInfo, 20, metaInfo.categorical.length, 0)
 
-    assert(1.0 == forest.predict(TEST_DATA(0)))
-    // This one is tie-broken -- 0 is OK too
-    assert(0.0 == forest.predict(TEST_DATA(1)))
-    assert(1.0 == forest.predict(TEST_DATA(2)))
+      if (1.0 != forest.predict(TEST_DATA(0))) error += 1
+      if (1.0 != forest.predict(TEST_DATA(2))) error += 1
+    }
+
+    assert (error < 2 * iteration * 0.1)    // error rate must be lesser than 10%
   }
 }

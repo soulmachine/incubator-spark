@@ -308,9 +308,8 @@ private [rf] object RegressionComputeSplit {
     val sk = new Array[Double](2)   // less, greater
 
     // points sort
-    val sortedPoints = data.points.toArray
     implicit val ordering = new PointOrdering(feature)
-    Sorting.quickSort(sortedPoints)
+    val sortedPoints = data.points.sorted
 
     for (point <- sortedPoints) {
       val y = point.label
