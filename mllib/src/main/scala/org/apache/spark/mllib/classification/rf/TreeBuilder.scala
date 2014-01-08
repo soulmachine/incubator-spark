@@ -317,47 +317,16 @@ object DecisionTreeBuilder extends Logging {
    * @param m        number of features to choose
    * @return list of selected features' indices, or null if all features have already been selected
    */
-  private def randomFeatures(rnd: Random, selected: Array[Boolean], m: Int): Array[Int] = {
-    var nbNonSelected = 0 // number of non selected features
-    for (sel <- selected) {
-      if (!sel) {
-        nbNonSelected += 1
-      }
-    }
+  def randomFeatures(rnd: Random, selected: Array[Boolean], m: Int): Array[Int] = {
+    val nonSelected = selected.indices.filterNot(selected)
 
-    if (nbNonSelected == 0) {
+    if (nonSelected.isEmpty) {
       logWarning("All features are selected !")
-      return NO_FEATURES
-    }
-
-    val result: Array[Int]  = if (nbNonSelected <= m) new Array[Int](nbNonSelected)
-                              else new Array[Int](m)
-    if (nbNonSelected <= m) {  // return all non selected attributes
-      var index = 0
-      for (feature <- 0 until selected.length) {
-        if (!selected(feature)) {
-          result(index) = feature
-          index += 1
-        }
-      }
+      NO_FEATURES
+    } else if (nonSelected.size <= m) {
+      nonSelected.toArray
     } else {
-      for (index <- 0 until m) {
-        // randomly choose a "non selected" attribute
-        var rind = -1
-        do {
-          rind = rnd.nextInt(selected.length)
-        } while (selected(rind))
-
-        result(index) = rind
-        selected(rind) = true // temporarily set the chosen attribute to be selected
-      }
-
-      // the chosen attributes are not yet selected
-      for (feature <- result) {
-        selected(feature) = false
-      }
+      rnd.shuffle(nonSelected).take(m).toArray
     }
-
-    result
   }
 }
