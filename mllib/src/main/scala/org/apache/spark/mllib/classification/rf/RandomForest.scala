@@ -36,16 +36,18 @@ class RandomForest(private val metaInfo: DataMetaInfo, private val nbTrees: Int,
    * Run the algorithm with the configured parameters on an input RDD of LabeledPoint .
    */
   def run(input: RDD[LabeledPoint]): RandomForestModel = {
-    val trees = Array.fill[Node](nbTrees) {
-      input.sample(withReplacement = true, 1.0, seed).coalesce(1).mapPartitions { iterator =>
+    val rnd = new Random(seed)
+    val seeds = Array.fill(nbTrees)(rnd.nextInt())
+    val trees = Array.tabulate[RDD[Node]](nbTrees) { i =>
+      input.sample(withReplacement = true, 1.0, seeds(i)).coalesce(1).mapPartitions { iterator =>
         val rnd = new Random(seed)
         val data = Data(metaInfo, iterator.toArray)
         val tree = new DecisionTreeBuilder().build(rnd, data)
         List(tree).iterator
-      }.first()
-    }
+      }
+    }.reduce(_ ++ _)
 
-    new RandomForestModel(trees, metaInfo, seed)
+    new RandomForestModel(trees.collect(), metaInfo, seed)
   }
 }
 
