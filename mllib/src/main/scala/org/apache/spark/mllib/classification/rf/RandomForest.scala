@@ -110,9 +110,6 @@ object RandomForest {
    * @param categorical Whether the label is categorical or numerical, true if categorical,
    *                    false if numerical.when one feature is categorical, the corresponding
    *                    value is true; when numerical, false.
-   * @param nbLabels Number of label values, just for classification problem
-   * @param nbValues nbValues[i] means number of feature i's values, if feature i is numerical,
-   *                 nbValues[i] is -1
    * @param nbTrees Number of trees to build, should be greater than number of partitions.
    * @param m number of attributes to select randomly at each node, default is sqrt(dimension)
    * @param minSplitNum minimum number for split, default is 2
@@ -123,16 +120,14 @@ object RandomForest {
       seed: Int,
       classification: Boolean,
       categorical: Array[Boolean],
-      nbLabels: Int,
-      nbValues: Array[Int],
       nbTrees: Int,
       m: Int = 0,
-      minSplitNum: Int = 0) : RandomForestModel = {
-    train(input, partial, seed, new DataMetaInfo(classification, categorical, nbLabels, nbValues),
-      nbTrees, m, minSplitNum)
+      minSplitNum: Int = 2) : RandomForestModel = {
+    val metaInfo = generateMetaInfo(input, classification, categorical)
+    train(input, partial, seed, metaInfo, nbTrees, m, minSplitNum)
   }
 
-  private[classification] def train(
+  private[rf] def train(
        input: RDD[LabeledPoint],
        partial: Boolean,
        seed: Int,
@@ -146,6 +141,47 @@ object RandomForest {
     } else {
       rm.runFull(input, nbTrees, m, minSplitNum)
     }
+  }
+
+  /**
+   *  Generate meta info.
+   */
+  private[rf] def generateMetaInfo(
+                                    data: RDD[LabeledPoint],
+                                    classification: Boolean,
+                                    categorical: Array[Boolean]): DataMetaInfo = {
+    val D = categorical.length
+    val max = data.mapPartitions { iterator =>
+      val maxValues = iterator.foldLeft( Array.fill(D+1)(0.0)){ (result, p) =>
+        if (result(D) < p.label) result(D) = p.label
+        for (i <- 0 until D) {
+          if (result(i) < p.features(i)) result(i) = p.features(i)
+        }
+        result
+      }
+      List(maxValues).toIterator
+    }.collect()
+
+    val nbLabels = if (classification) {
+      var maxLabel = 0.0
+      max.foreach { v =>
+        if (v(D) > maxLabel) maxLabel = v(D)
+      }
+      maxLabel.toInt + 1
+    } else {
+      -1
+    }
+    val maxValues = max.foldLeft(Array.fill(D)(0.0)) { (result, p) =>
+      for (i <- 0 until D) {
+        if (result(i) < p(i)) result(i) = p(i)
+      }
+      result
+    }
+    val nbValues = Array.tabulate(D) {i =>
+      if (categorical(i)) maxValues(i).toInt + 1
+      else -1
+    }
+    DataMetaInfo(classification, categorical, nbLabels, nbValues)
   }
 
   /**
