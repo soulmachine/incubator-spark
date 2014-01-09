@@ -180,8 +180,9 @@ class RandomForestSuite extends FunSuite with BeforeAndAfterAll {
     assert(predictions(2)(2).isNaN)
 
     assert(1.0 == forest.predict(TEST_DATA(0)))
-    // This one is tie-broken -- 0 is OK too
-    assert(1.0 == forest.predict(TEST_DATA(1)) || 0.0 == forest.predict(TEST_DATA(1)))
+    // This one is tie-broken, either 1 or 0 is OK
+    val label = forest.predict(TEST_DATA(1))
+    assert(1.0 == label || 0.0 == label)
     assert(1.0 == forest.predict(TEST_DATA(2)))
   }
 
