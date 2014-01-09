@@ -219,11 +219,10 @@ class RandomForestSuite extends FunSuite with BeforeAndAfterAll {
     val dataRDD  = sc.parallelize(data ++ data, 2)
 
     val iteration = 100
-    val seeds = Array.fill(iteration)(rnd.nextInt())
     var error = 0
     for (i <- 0 until iteration) {
-      val forest = RandomForest.train(dataRDD, false, seeds(i), metaInfo.classification,
-        metaInfo.categorical, 20, metaInfo.categorical.length, 0)
+      val forest = RandomForest.train( dataRDD, partial = false, rnd.nextInt(),
+        metaInfo.classification, metaInfo.categorical, 20, metaInfo.categorical.length, 0)
 
       if (1.0 != forest.predict(TEST_DATA(0))) error += 1
       if (1.0 != forest.predict(TEST_DATA(2))) error += 1
@@ -238,11 +237,10 @@ class RandomForestSuite extends FunSuite with BeforeAndAfterAll {
     val dataRDD  = sc.parallelize(data ++ data ++ data, 2)
 
     val iteration = 100
-    val seeds = Array.fill(iteration)(rnd.nextInt())
     var error = 0
     for (i <- 0 until iteration) {
-      val forest = RandomForest.train(dataRDD, true, seeds(i), metaInfo.classification,
-        metaInfo.categorical, 20, metaInfo.categorical.length, 0)
+      val forest = RandomForest.train(dataRDD, partial = true, rnd.nextInt(),
+        metaInfo.classification, metaInfo.categorical, 20, metaInfo.categorical.length, 0)
 
       if (1.0 != forest.predict(TEST_DATA(0))) error += 1
       if (1.0 != forest.predict(TEST_DATA(2))) error += 1
