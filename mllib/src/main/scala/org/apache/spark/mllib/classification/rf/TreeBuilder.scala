@@ -41,52 +41,30 @@ abstract class TreeBuilder extends Logging {
 /**
  * Builds a classification tree or regression tree.
  *
- * A classification tree is built when the criterion variable is the categorical attribute.<br>
+ * A classification tree is built when the criterion variable is the categorical attribute.
  * A regression tree is built when the criterion variable is the numerical attribute.
+ *
+ * @param m number of attributes to select randomly at each node
+ * @param minSplitNum minimum number for split
+ * @param minVarianceProportion minimum proportion of the total variance for split
  */
-class DecisionTreeBuilder extends TreeBuilder {
+class DecisionTreeBuilder(private var m: Int = 0, private var minSplitNum: Double = 2.0,
+    private var minVarianceProportion: Double = 1.0e-3) extends TreeBuilder {
   /**
    * indicates which CATEGORICAL attributes have already been selected in the parent nodes
    */
   private var selected: Array[Boolean] = _
-  /**
-   * number of attributes to select randomly at each node
-   */
-  private var m: Int  = _
+
   /**
    * IgSplit implementation
    */
   private var computeSplit: ComputeSplit = _
 
   /**
-   * minimum number for split
-   */
-  private var minSplitNum: Double = 2.0
-  /**
-   * minimum proportion of the total variance for split
-   */
-  private var minVarianceProportion: Double = 1.0e-3
-
-  /**
    * minimum variance for split
    */
   private var minVariance: Double = Double.NaN
 
-  def setM(m: Int) {
-    this.m = m
-  }
-
-  def setComputeSplit(computeSplit: ComputeSplit) {
-    this.computeSplit = computeSplit
-  }
-
-  def setMinSplitNum(minSplitNum: Int) {
-    this.minSplitNum = minSplitNum
-  }
-
-  def setMinVarianceProportion(minVarianceProportion: Double) {
-    this.minVarianceProportion = minVarianceProportion
-  }
   /**
    * Builds a Decision tree using the training data
    *
@@ -196,10 +174,10 @@ class DecisionTreeBuilder extends TreeBuilder {
     if (!data.metainfo.categorical(best.feature)) {
       var temp: Array[Boolean] = null
 
-      val lesserThan = (point: LabeledPoint) => { point.features(best.feature) < best.split }
-      val greaterThan = (point: LabeledPoint) => !lesserThan(point)
-      val loSubset = data.subset(lesserThan)
-      val hiSubset = data.subset(greaterThan)
+      val less = (point: LabeledPoint) => { point.features(best.feature) < best.split }
+      val greater = (point: LabeledPoint) => !less(point)
+      val loSubset = data.subset(less)
+      val hiSubset = data.subset(greater)
 
       if (loSubset.isEmpty || hiSubset.isEmpty) {
         // the selected attribute did not change the data, avoid using it in the child notes

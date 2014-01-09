@@ -113,28 +113,11 @@ class RandomForestSuite extends FunSuite with BeforeAndAfterAll {
   private def buildForest(dataset: Array[Data]): RandomForestModel = {
     val trees = Array.tabulate[Node](dataset.length) { i =>
       val data = dataset(i)
-      val builder = new DecisionTreeBuilder()
-      builder.setM(data.metainfo.categorical.length)
-      builder.setMinSplitNum(0)
+      val builder = new DecisionTreeBuilder(data.metainfo.categorical.length, 0)
       builder.build(rnd, data)
     }
 
     new RandomForestModel(trees, dataset(0).metainfo)
-  }
-
-  test ("ClassificationComputeSplit") {
-    val ref = new DefaultComputeSplit()
-    val opt = new ClassificationComputeSplit()
-    val data = Data(metaInfo, TRAIN_DATA)
-
-    for (f <- 0 until data.metainfo.categorical.length) {
-      val expected = ref(data, f)
-      val actual = opt(data, f)
-
-      if (!metaInfo.categorical(f)) {
-          assert(math.abs(expected.split - actual.split) < EPSILON)
-      }
-    }
   }
 
   test ("RegressionComputeSplit") {
@@ -164,8 +147,7 @@ class RandomForestSuite extends FunSuite with BeforeAndAfterAll {
     val dataset = generateTrainingDataA()
     val forest = buildForest(dataset)
 
-    val predictions = new Array[Array[Double]](TEST_DATA.size)
-    forest.predict(TEST_DATA, predictions)
+    val predictions = forest.predict(TEST_DATA)
 
     assert(1.0 == predictions(0)(0))
     assert(predictions(0)(1).isNaN)
@@ -202,8 +184,7 @@ class RandomForestSuite extends FunSuite with BeforeAndAfterAll {
       forests(i) = buildForest(subDataset)
     }
 
-    var predictions = new Array[Array[Double]](dataset(0).size)
-    forests(0).predict(dataset(0).points.map(_.features), predictions)
+    var predictions = forests(0).predict(dataset(0).points.map(_.features))
     assert(math.abs(20.0 - predictions(0)(0)) < EPSILON)
     assert(math.abs(20.0 - predictions(0)(1)) < EPSILON)
     assert(math.abs(39.0 - predictions(1)(0)) < EPSILON)
@@ -213,13 +194,11 @@ class RandomForestSuite extends FunSuite with BeforeAndAfterAll {
     assert(math.abs(22.0 - predictions(17)(0)) < EPSILON)
     assert(math.abs(23.0 - predictions(17)(1)) < EPSILON)
 
-    predictions = new Array[Array[Double]](dataset(1).size)
-    forests(1).predict(dataset(1).points.map(_.features), predictions)
+    predictions = forests(1).predict(dataset(1).points.map(_.features))
     assert(math.abs(30.0 - predictions(19)(0)) < EPSILON)
     assert(math.abs(29.0 - predictions(19)(1)) < EPSILON)
 
-    predictions = new Array[Array[Double]](dataset(2).size)
-    forests(2).predict(dataset(2).points.map(_.features), predictions)
+    predictions = forests(2).predict(dataset(2).points.map(_.features))
     assert(math.abs(29.0 - predictions(9)(0)) < EPSILON)
     assert(math.abs(28.0 - predictions(9)(1)) < EPSILON)
 

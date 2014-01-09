@@ -45,9 +45,7 @@ class RandomForest(private val metaInfo: DataMetaInfo, seed: Int)
       input.sample(withReplacement = true, 1.0, seeds(i)).coalesce(1).mapPartitions { iterator =>
         val rnd = new Random(seeds(i))
         val data = Data(metaInfo, iterator.toArray)
-        val builder = new DecisionTreeBuilder()
-        builder.setM(m)
-        builder.setMinSplitNum(minSplitNum)
+        val builder = new DecisionTreeBuilder(m, minSplitNum)
         val tree = builder.build(rnd, data)
 
         List(tree).iterator

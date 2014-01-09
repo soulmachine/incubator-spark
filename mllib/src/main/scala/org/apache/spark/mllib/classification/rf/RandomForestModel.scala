@@ -22,7 +22,6 @@ import scala.util.Random
 
 import org.apache.spark.rdd.RDD
 import org.apache.spark.mllib.classification.ClassificationModel
-import java.io.ObjectInputStream
 
 /**
  * Classification model trained using Random forest.
@@ -37,16 +36,8 @@ class RandomForestModel(val trees: Array[Node], val metaInfo: DataMetaInfo) exte
 
   def predict(testData: Array[Double]): Double = {
     if (!metaInfo.classification) {
-      var sum = 0.0
-      var cnt = 0
-      trees.foreach { tree =>
-        val prediction = tree.classify(testData)
-        if (!prediction.isNaN) {
-          sum += prediction
-          cnt += 1
-        }
-      }
-      if (cnt > 0) sum / cnt else Double.NaN
+      val predictions = trees.map(tree=>tree.classify(testData)).filterNot(_.isNaN)
+      if (predictions.isEmpty) Double.NaN else predictions.sum / predictions.size
     } else {
       val predictions = new Array[Int](metaInfo.nbLabels)
       trees.foreach { tree =>
@@ -64,19 +55,8 @@ class RandomForestModel(val trees: Array[Node], val metaInfo: DataMetaInfo) exte
   /**
    * Classifies the data and get every tree's result, just for unit test.
    */
-  def predict(data: Array[Array[Double]], predictions: Array[Array[Double]]) {
-    require(data.size == predictions.length, "predictions.length must be equal to data.size()")
-    if (data.isEmpty) {
-      return
-    }
-    for (treeId <- 0 until trees.length) {
-      for (index <- 0 until data.size) {
-        if (predictions(index) == null) {
-          predictions(index) = new Array[Double](trees.size)
-        }
-        predictions(index)(treeId) = trees(treeId).classify(data(index))
-      }
-    }
+  def predict(data: Array[Array[Double]]): Array[Array[Double]] =  {
+   data.map ( point => trees.map(tree=>tree.classify(point)) )
   }
 }
 
@@ -121,15 +101,15 @@ class CategoricalNode(private val feature: Int,
 
   def this() = this(0, null, null)
 
-  override def classify(x: Array[Double]): Double = {
+  def classify(x: Array[Double]): Double = {
     val index = values.indexOf(x(feature))
 
     if (index == -1) Double.NaN else children(index).classify(x)
   }
 
-  override def maxDepth(): Long =  children.map(child => child.maxDepth()).max + 1
+  def maxDepth(): Long =  children.map(child => child.maxDepth()).max + 1
 
-  override def numNodes(): Long = children.map(child => child.numNodes()).sum + 1
+  def numNodes(): Long = children.map(child => child.numNodes()).sum + 1
 }
 
 /**
@@ -145,11 +125,11 @@ class NumericalNode(private val feature: Int,
     private val loChild: Node,
     private val hiChild: Node) extends Node {
 
-  override def classify(x: Array[Double]): Double = {
+  def classify(x: Array[Double]): Double = {
     if (x(feature) < split) loChild.classify(x) else hiChild.classify(x)
   }
 
-  override def maxDepth(): Long = 1 + math.max(loChild.maxDepth(), hiChild.maxDepth())
+  def maxDepth(): Long = 1 + math.max(loChild.maxDepth(), hiChild.maxDepth())
 
-  override def numNodes(): Long = 1 + loChild.numNodes() + hiChild.numNodes()
+  def numNodes(): Long = 1 + loChild.numNodes() + hiChild.numNodes()
 }

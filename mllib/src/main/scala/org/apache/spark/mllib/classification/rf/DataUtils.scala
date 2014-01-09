@@ -18,8 +18,6 @@
 package org.apache.spark.mllib.classification.rf
 
 import scala.util.Random
-import scala.collection.mutable.ListBuffer
-
 
 private [rf] object DataUtils {
 
@@ -50,19 +48,8 @@ private [rf] object DataUtils {
    * @return index of the maximum
    */
   def maxIndex(rnd: Random, values: Array[Int]): Int = {
-    var max = 0
-    val maxIndices = new ListBuffer[Int]
-
-    for (index <- 0 until values.length) {
-      if (values(index) > max) {
-        max = values(index)
-        maxIndices.clear()
-        maxIndices += index
-      } else if (values(index) == max) {
-        maxIndices += index
-      }
-    }
-
+    val maxValue = values.max
+    val maxIndices = values.zipWithIndex.filter(_._1 == maxValue).map(_._2)
     if (maxIndices.length > 1) maxIndices(rnd.nextInt(maxIndices.length)) else maxIndices(0)
   }
 }
