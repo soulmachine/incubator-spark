@@ -112,12 +112,12 @@ object RandomForest {
    *        they should be converted to Integers, starting from 0.
    * @param partial If the training data is too big to be loaded into one machine, set this to
    *                tree, so that each tree will be trained using partial data.
-   * @param seed seed Random seed
+   * @param seed Random seed
    * @param classification Whether the label is categorical or numerical.
-   * @param categorical Whether the label is categorical or numerical, true if categorical,
-   *                    false if numerical.when one feature is categorical, the corresponding
-   *                    value is true; when numerical, false.
-   * @param nbTrees Number of trees to build, should be greater than number of partitions.
+   * @param categorical If the j'th feature is categorical, then categorical(j)=true;
+   *                    if the j'th feature is numerical, then categorical(j)=false.
+   * @param nbTrees Number of trees to build, should be greater than or equal to the number
+   *                of partitions.
    * @param m number of attributes to select randomly at each node, default is sqrt(dimension)
    * @param minSplitNum minimum number for split, default is 2
    */
