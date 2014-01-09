@@ -17,16 +17,16 @@
 
 package org.apache.spark.mllib.classification.rf
 
+import scala.concurrent._
+import ExecutionContext.Implicits.global
+import scala.concurrent.duration.Duration
 import scala.util.Random
 
 import org.apache.spark.rdd.RDD
 import org.apache.spark.mllib.regression._
 
 /**
- * Builds a random forest using full data. Each worker uses the data sampled from the full data.
- *
- * Each sampled RDD has been coalesced to one partition, thus we can avoid data network IO.
- *
+ * Builds a random forest.
  * @param metaInfo MetaInfo of training data.
  * @param seed Random seed.
  */
@@ -34,13 +34,17 @@ class RandomForest(private val metaInfo: DataMetaInfo, seed: Int)
     extends Serializable{
 
   /**
-   * Run the algorithm with the configured parameters on an input RDD of LabeledPoint .
+   * Builds a random forest using full data. Each tree uses the data sampled from the full data.
+   *
+   * Each sampled RDD has been coalesced to one partition, thus we can avoid data network IO.
    */
-  def run(input: RDD[LabeledPoint], nbTrees: Int, m: Int, minSplitNum: Int): RandomForestModel = {
+  def runFull(input: RDD[LabeledPoint], nbTrees: Int, m: Int,
+      minSplitNum: Int): RandomForestModel = {
     val seeds = {
       val rnd = new Random(seed)
       Array.fill(nbTrees)(rnd.nextInt())
     }
+
     val trees = Array.tabulate[RDD[Node]](nbTrees) { i =>
       input.sample(withReplacement = true, 1.0, seeds(i)).coalesce(1).mapPartitions { iterator =>
         val rnd = new Random(seeds(i))
@@ -54,6 +58,43 @@ class RandomForest(private val metaInfo: DataMetaInfo, seed: Int)
 
     new RandomForestModel(trees.collect(), metaInfo)
   }
+
+  /**
+   * Builds a random forest using partial data. Each tree uses only the data given by its partition.
+   *
+   * Each sampled RDD has been coalesced to one partition, thus we can avoid data network IO.
+   */
+  def runPartial(input: RDD[LabeledPoint], nbTrees: Int, m: Int,
+       minSplitNum: Int): RandomForestModel = {
+    val numPartitions = input.partitions.length
+    val partitionToRDDs =  Array.tabulate(numPartitions) { i =>
+      input.mapPartitionsWithIndex{ (index, iterator) =>
+        if (index == i) iterator else List.empty[LabeledPoint].iterator
+      }.coalesce(1)
+    }
+
+    val trees = partitionToRDDs.map { rdd =>
+      rdd.mapPartitionsWithIndex { (index, iterator) =>
+        val data = Data(metaInfo, iterator.toArray)
+        val numTrees = RandomForest.nbTreesOfPartition(nbTrees, numPartitions, index)
+        val seeds = {
+          val rnd = new Random(seed)
+          Array.fill(numTrees)(rnd.nextInt())
+        }
+
+        val futures = Array.tabulate(numTrees){ i=>
+          val rnd = new Random(seeds(i))
+          val builder = new DecisionTreeBuilder(m, minSplitNum)
+          future {builder.build(rnd, data.bagging(rnd)) }
+        }
+        val trees = Array.tabulate(numTrees)(i=> Await.result(futures(i), Duration.Inf))
+
+        trees.toIterator
+      }
+    }
+
+    new RandomForestModel(trees.map(_.collect()).flatten, metaInfo)
+  }
 }
 
 object RandomForest {
@@ -62,6 +103,8 @@ object RandomForest {
    *
    * @param input RDD of (label, array of features) pairs, for categorical features,
    *        they should be converted to Integers, starting from 0.
+   * @param partial If the training data is too big to be loaded into one machine, set this to
+   *                tree, so that each tree will be trained using partial data.
    * @param seed seed Random seed
    * @param classification Whether the label is categorical or numerical.
    * @param categorical Whether the label is categorical or numerical, true if categorical,
@@ -76,6 +119,7 @@ object RandomForest {
    */
   def train(
       input: RDD[LabeledPoint],
+      partial: Boolean,
       seed: Int,
       classification: Boolean,
       categorical: Array[Boolean],
@@ -84,16 +128,43 @@ object RandomForest {
       nbTrees: Int,
       m: Int = 0,
       minSplitNum: Int = 0) : RandomForestModel = {
-    train(input, seed, new DataMetaInfo(classification, categorical, nbLabels, nbValues), nbTrees, m, minSplitNum)
+    train(input, partial, seed, new DataMetaInfo(classification, categorical, nbLabels, nbValues),
+      nbTrees, m, minSplitNum)
   }
 
   private[classification] def train(
        input: RDD[LabeledPoint],
+       partial: Boolean,
        seed: Int,
        metaInfo: DataMetaInfo,
        nbTrees: Int,
        m: Int,
        minSplitNum: Int): RandomForestModel = {
-    new RandomForest(metaInfo, seed).run(input, nbTrees, m, minSplitNum)
+    val rm = new RandomForest(metaInfo, seed)
+    if  (partial) {
+      rm.runPartial(input, nbTrees, m, minSplitNum)
+    } else {
+      rm.runFull(input, nbTrees, m, minSplitNum)
+    }
+  }
+
+  /**
+   * Compute the number of trees for a given partition. The first partition (0) may be longer than
+   * the rest of partition because of the remainder.
+   *
+   * @param nbTrees total number of trees
+   * @param nbPartitions total number of partitions
+   * @param partition partition to compute the number of trees for
+   */
+  private[rf] def nbTreesOfPartition(nbTrees: Int, nbPartitions: Int, partition: Int): Int = {
+    var result = nbTrees / nbPartitions
+    // if nbTrees is less than nbPartitions, each partition at least builds one tree
+    if (result <= 0) result = 1
+    else {
+      if (partition == 0) {
+        result += nbTrees - result * nbPartitions
+      }
+    }
+    result
   }
 }

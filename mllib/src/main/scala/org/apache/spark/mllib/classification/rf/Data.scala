@@ -51,12 +51,14 @@ private [rf] case class Data(metainfo: DataMetaInfo, points: Array[LabeledPoint]
    * If data has N cases, sample N cases at random -but with replacement.
    */
   def bagging(rnd: Random): Data = {
-    val dataSize = size
-    val bag = Array.fill[LabeledPoint](dataSize) {
-      points(rnd.nextInt(dataSize))
-    }
+    this.synchronized{
+      val dataSize = size
+      val bag = Array.fill[LabeledPoint](dataSize) {
+        points(rnd.nextInt(dataSize))
+      }
 
-    new Data(metainfo, bag)
+      new Data(metainfo, bag)
+    }
   }
 
   /**

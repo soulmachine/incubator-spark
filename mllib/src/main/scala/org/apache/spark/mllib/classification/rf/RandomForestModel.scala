@@ -29,7 +29,8 @@ import org.apache.spark.mllib.classification.ClassificationModel
  * @param trees trees that are built on training data.
  * @param metaInfo the metaInfo of data.
  */
-class RandomForestModel(val trees: Array[Node], val metaInfo: DataMetaInfo) extends ClassificationModel {
+class RandomForestModel(val trees: Array[Node], val metaInfo: DataMetaInfo)
+  extends ClassificationModel {
   @transient private val rnd = new Random()
 
   def predict(testData: RDD[Array[Double]]): RDD[Double] = testData.map(predict)

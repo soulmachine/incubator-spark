@@ -34,7 +34,8 @@ class RandomForestSuite extends FunSuite with BeforeAndAfterAll {
   @transient private val seed = 17
   @transient private val rnd = new Random(seed)
 
-  val metaInfo = DataMetaInfo(classification = true, Array(true, false, false, true), 2, Array(3, -1,-1,2))
+  val metaInfo = DataMetaInfo(classification = true, Array(true, false, false, true),
+    2, Array(3, -1,-1,2))
 
   @transient private val TRAIN_DATA = Array(
     LabeledPoint(1, Array(1, 85.0, 85, 0)),
@@ -211,20 +212,41 @@ class RandomForestSuite extends FunSuite with BeforeAndAfterAll {
     assert(math.abs(28.5 - forests(2).predict(dataset(2).points(9).features)) < EPSILON)
   }
 
-  test("Spark Random forest for classification") {
+  test("Spark Random forest for classification using full data") {
     val dataset = generateTrainingDataA()
     val data = dataset(0).points ++ dataset(1).points
-    val dataRDD  = sc.parallelize(data ++ data, 2)  // since training data is insufficient, duplicate itself
+    // since training data is insufficient, duplicate itself
+    val dataRDD  = sc.parallelize(data ++ data, 2)
 
     val iteration = 100
     val seeds = Array.fill(iteration)(rnd.nextInt())
     var error = 0
     for (i <- 0 until iteration) {
-      val forest = RandomForest.train(dataRDD, seeds(i), metaInfo, 20, metaInfo.categorical.length, 0)
+      val forest = RandomForest.train(dataRDD, partial = false, seeds(i), metaInfo, 20,
+        metaInfo.categorical.length, 0)
 
       if (1.0 != forest.predict(TEST_DATA(0))) error += 1
       if (1.0 != forest.predict(TEST_DATA(2))) error += 1
     }
-    assert (error < 2 * iteration * 0.1)    // error rate must be lesser than 10%
+    assert (error < 2 * iteration * 0.1)    // error rate must be less than 10%
+  }
+
+  test("Spark Random forest for classification using partial data") {
+    val dataset = generateTrainingDataA()
+    val data = dataset(0).points ++ dataset(1).points
+    // since training data is insufficient, duplicate itself
+    val dataRDD  = sc.parallelize(data ++ data ++ data, 2)
+
+    val iteration = 100
+    val seeds = Array.fill(iteration)(rnd.nextInt())
+    var error = 0
+    for (i <- 0 until iteration) {
+      val forest = RandomForest.train(dataRDD, partial = true, seeds(i), metaInfo, 20,
+        metaInfo.categorical.length, 0)
+
+      if (1.0 != forest.predict(TEST_DATA(0))) error += 1
+      if (1.0 != forest.predict(TEST_DATA(2))) error += 1
+    }
+    assert (error < 2 * iteration * 0.2)    // error rate must be less than 20%
   }
 }
