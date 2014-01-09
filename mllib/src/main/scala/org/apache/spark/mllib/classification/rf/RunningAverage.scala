@@ -26,24 +26,24 @@ package org.apache.spark.mllib.classification.rf
 private [rf] abstract class RunningAverage {
 
   /**
-   * @param item new item to add to the running average
+   * @param datum new item to add to the running average
    * @throws IllegalArgumentException if datum is [[scala.Double.NaN]]
    */
-  def addItem(item: Double): Unit
+  def addDatum(datum: Double): Unit
 
   /**
-   * @param item item to remove to the running average
+   * @param datum item to remove to the running average
    * @throws IllegalArgumentException if datum is [[scala.Double.NaN]]
    * @throws IllegalStateException if count is 0
    */
-  def removeItem(item: Double): Unit
+  def removeDatum(datum: Double): Unit
 
   /**
    * @param delta amount by which to change a datum in the running average
    * @throws IllegalArgumentException if delta is [[scala.Double.NaN]]
    * @throws IllegalStateException if count is 0
    */
-  def changeItem(delta: Double): Unit
+  def changeDatum(delta: Double): Unit
 
   def count: Int
 
@@ -61,26 +61,26 @@ private[rf] class FullRunningAverage(private var count_ : Int, private var avera
 
   def this() = this(0, Double.NaN)
 
-  def addItem(item: Double) {
+  def addDatum(datum: Double) {
     count_ += 1
     if (count_ == 1) {
-      average_ = item
+      average_ = datum
     } else {
-      average_ = (average_ * (count_ - 1) + item) / count_
+      average_ = (average_ * (count_ - 1) + datum) / count_
     }
   }
 
-  def removeItem(item: Double) {
+  def removeDatum(datum: Double) {
     if (count_ == 0) throw new IllegalStateException()
     count_ -= 1
     if (count_ == 0) {
       average_ = Double.NaN
     } else {
-      average_ = (average_ * (count_ + 1) - item) / count_
+      average_ = (average_ * (count_ + 1) - datum) / count_
     }
   }
 
-  def changeItem(delta: Double) {
+  def changeDatum(delta: Double) {
     if (count_ == 0) throw new IllegalStateException()
     average_ += delta / count_
   }

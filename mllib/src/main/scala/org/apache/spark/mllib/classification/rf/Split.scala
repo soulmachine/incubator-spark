@@ -208,21 +208,21 @@ private [rf] object RegressionComputeSplit {
       val x = point.features(feature).toInt
       val y = point.label
       if (ra(x).count == 0) {
-        ra(x).addItem(y)
+        ra(x).addDatum(y)
         sk(x) = 0.0
       } else {
         val mean = ra(x).average
-        ra(x).addItem(y)
+        ra(x).addDatum(y)
         sk(x) += (y - mean) * (y - ra(x).average)
       }
 
       // total variance
       if (totalRa.count == 0) {
-        totalRa.addItem(y)
+        totalRa.addDatum(y)
         totalSk = 0.0
       } else {
         val mean = totalRa.average
-        totalRa.addItem(y)
+        totalRa.addDatum(y)
         totalSk += (y - mean) * (y - totalRa.average)
       }
     }
@@ -250,11 +250,11 @@ private [rf] object RegressionComputeSplit {
     for (point <- sortedPoints) {
       val y = point.label
       if (ra(1).count == 0) {
-        ra(1).addItem(y)
+        ra(1).addDatum(y)
         sk(1) = 0.0
       } else {
         val mean = ra(1).average
-        ra(1).addItem(y)
+        ra(1).addDatum(y)
         sk(1) += (y - mean) * (y - ra(1).average)
       }
     }
@@ -282,16 +282,16 @@ private [rf] object RegressionComputeSplit {
 
       // computes the variance
       if (ra(0).count == 0) {
-        ra(0).addItem(y)
+        ra(0).addDatum(y)
         sk(0) = 0.0
       } else {
         val mean = ra(0).average
-        ra(0).addItem(y)
+        ra(0).addDatum(y)
         sk(0) += (y - mean) * (y - ra(0).average)
       }
 
       val mean = ra(1).average
-      ra(1).removeItem(y)
+      ra(1).removeDatum(y)
       sk(1) -= (y - mean) * (y - ra(1).average)
 
       preSplit = point.features(feature)
