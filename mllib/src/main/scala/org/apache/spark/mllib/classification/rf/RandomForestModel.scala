@@ -29,10 +29,9 @@ import java.io.ObjectInputStream
  *
  * @param trees trees that are built on training data.
  * @param metaInfo the metaInfo of data.
- * @param seed Random seed.
  */
-class RandomForestModel(val trees: Array[Node], val metaInfo: DataMetaInfo, seed: Int) extends ClassificationModel {
-  @transient private var rnd = new Random(seed)
+class RandomForestModel(val trees: Array[Node], val metaInfo: DataMetaInfo) extends ClassificationModel {
+  @transient private val rnd = new Random()
 
   def predict(testData: RDD[Array[Double]]): RDD[Double] = testData.map(predict)
 
@@ -63,7 +62,7 @@ class RandomForestModel(val trees: Array[Node], val metaInfo: DataMetaInfo, seed
   }
 
   /**
-   * Classifies the data and calls callback for each classification, just for unit tests.
+   * Classifies the data and get every tree's result, just for unit test.
    */
   def predict(data: Array[Array[Double]], predictions: Array[Array[Double]]) {
     require(data.size == predictions.length, "predictions.length must be equal to data.size()")
@@ -78,11 +77,6 @@ class RandomForestModel(val trees: Array[Node], val metaInfo: DataMetaInfo, seed
         predictions(index)(treeId) = trees(treeId).classify(data(index))
       }
     }
-  }
-
-  private def readObject(stream: ObjectInputStream) {
-    stream.defaultReadObject()
-    rnd = new Random(seed)
   }
 }
 

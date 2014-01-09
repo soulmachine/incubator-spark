@@ -119,7 +119,7 @@ class RandomForestSuite extends FunSuite with BeforeAndAfterAll {
       builder.build(rnd, data)
     }
 
-    new RandomForestModel(trees, dataset(0).metainfo, seed)
+    new RandomForestModel(trees, dataset(0).metainfo)
   }
 
   test ("ClassificationComputeSplit") {
@@ -181,7 +181,7 @@ class RandomForestSuite extends FunSuite with BeforeAndAfterAll {
 
     assert(1.0 == forest.predict(TEST_DATA(0)))
     // This one is tie-broken -- 0 is OK too
-    assert(1.0 == forest.predict(TEST_DATA(1)))
+    assert(1.0 == forest.predict(TEST_DATA(1)) || 0.0 == forest.predict(TEST_DATA(1)))
     assert(1.0 == forest.predict(TEST_DATA(2)))
   }
 
@@ -245,7 +245,6 @@ class RandomForestSuite extends FunSuite with BeforeAndAfterAll {
       if (1.0 != forest.predict(TEST_DATA(0))) error += 1
       if (1.0 != forest.predict(TEST_DATA(2))) error += 1
     }
-
     assert (error < 2 * iteration * 0.1)    // error rate must be lesser than 10%
   }
 }
