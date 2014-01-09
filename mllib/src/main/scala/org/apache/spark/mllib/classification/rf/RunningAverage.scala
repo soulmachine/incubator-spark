@@ -56,50 +56,36 @@ private [rf] abstract class RunningAverage {
  * track of the series of values, just its running average, so it doesn't even matter if you
  * remove/change a value that wasn't added.
  */
-private [rf] class FullRunningAverage(private var count_ : Int, private var average_ : Double)
-    extends RunningAverage with Serializable {
+private[rf] class FullRunningAverage(private var count_ : Int, private var average_ : Double)
+  extends RunningAverage with Serializable {
 
   def this() = this(0, Double.NaN)
 
   def addItem(item: Double) {
-    this.synchronized {
-      count_ += 1
-      if (count_ == 1) {
-        average_ = item
-      } else {
-        average_ = (average_ * (count_ - 1) + item) / count_
-      }
+    count_ += 1
+    if (count_ == 1) {
+      average_ = item
+    } else {
+      average_ = (average_ * (count_ - 1) + item) / count_
     }
   }
 
   def removeItem(item: Double) {
-    this.synchronized {
-      if (count_ == 0) throw new IllegalStateException()
-      count_ -= 1
-      if (count_ == 0) {
-        average_ = Double.NaN
-      } else {
-        average_ = (average_ * (count_ + 1) - item) / count_
-      }
+    if (count_ == 0) throw new IllegalStateException()
+    count_ -= 1
+    if (count_ == 0) {
+      average_ = Double.NaN
+    } else {
+      average_ = (average_ * (count_ + 1) - item) / count_
     }
   }
 
   def changeItem(delta: Double) {
-    this.synchronized {
-      if (count_ == 0) throw new IllegalStateException()
-      average_ += delta / count_
-    }
+    if (count_ == 0) throw new IllegalStateException()
+    average_ += delta / count_
   }
 
-  def count = {
-    this.synchronized {
-      count_
-    }
-  }
+  def count = count_
 
-  def average = {
-    this.synchronized {
-      average_
-    }
-  }
+  def average = average_
 }
