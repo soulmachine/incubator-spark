@@ -82,7 +82,7 @@ class RandomForest(private val metaInfo: DataMetaInfo, seed: Int)
       }.coalesce(1)
     }
 
-    val forest = partitionToRDDs.map { rdd =>
+    val trees = partitionToRDDs.map { rdd =>
       rdd.mapPartitionsWithIndex { (index, iterator) =>
         val data = Data(metaInfo, iterator.toArray)
         val numTrees = RandomForest.nbTreesOfPartition(nbTrees, numPartitions, index)
@@ -100,7 +100,7 @@ class RandomForest(private val metaInfo: DataMetaInfo, seed: Int)
       }
     }.reduce(_ ++ _)
 
-    new RandomForestModel(forest.collect(), metaInfo)
+    new RandomForestModel(trees.collect(), metaInfo)
   }
 }
 
