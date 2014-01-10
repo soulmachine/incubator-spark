@@ -17,12 +17,11 @@
 
 package org.apache.spark.examples
 
+import scala.Array
 
 import org.apache.spark._
-import scala.Array
-import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.mllib.classification.rf.RandomForest
-import scala.util.Random
+import org.apache.spark.mllib.regression.LabeledPoint
 
 /**
  * Random forest based classification.
@@ -59,14 +58,14 @@ object SparkRF {
     val numSlices = if (args.length > 1) args(1).toInt else 2
     val points = sc.parallelize(TRAIN_DATA, numSlices).cache()
 
-    println("Training data(the first column is the label):")
+    println("Training data (the first column is the label):")
     TRAIN_DATA.foreach { point =>
       print(point.label + " ")
       println(point.features.mkString(" "))
     }
 
     println("Begin training.")
-    val forest = RandomForest.train( points, true, Array(true, false, false, true),
+    val forest = RandomForest.train(points, true, Array(true, false, false, true),
       17, 20, false, TRAIN_DATA(0).features.length, 0)
     println("Training completed.")
 

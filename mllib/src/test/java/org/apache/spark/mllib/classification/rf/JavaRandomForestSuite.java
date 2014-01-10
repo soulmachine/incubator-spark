@@ -17,22 +17,21 @@
 
 package org.apache.spark.mllib.classification.rf;
 
-
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.List;
-
 import scala.util.Random;
+
+import com.google.common.collect.Lists;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.mllib.regression.LabeledPoint;
-
-import com.google.common.collect.Lists;
 
 public class JavaRandomForestSuite implements Serializable {
   private transient JavaSparkContext sc;
@@ -81,6 +80,7 @@ public class JavaRandomForestSuite implements Serializable {
     final Data data = new Data(metaInfo, TRAIN_DATA);
     @SuppressWarnings("unchecked")
     final List<LabeledPoint>[] points = new List[3];
+
     for (int i = 0; i < points.length; i++) {
       points[i] = Lists.newArrayList();
     }
@@ -93,32 +93,35 @@ public class JavaRandomForestSuite implements Serializable {
       }
     }
 
-    Data[] datas = new Data[points.length];
-    for (int i = 0; i < datas.length; i++) {
+    Data[] dataset = new Data[points.length];
+    for (int i = 0; i < dataset.length; i++) {
       LabeledPoint[] tmp = new LabeledPoint[points[i].size()];
       points[i].toArray(tmp);
-      datas[i] = new Data(metaInfo, tmp);
+      dataset[i] = new Data(metaInfo, tmp);
     }
 
-    return datas;
+    return dataset;
   }
 
   @Test
   public void runRandomForestWithFullData() {
     final Data[] dataset = generateTrainingDataA();
-    final List<LabeledPoint> points = new ArrayList<LabeledPoint>();
+    final List<LabeledPoint> points = new ArrayList<>();
+
     for (int i = 0; i < 2; ++i) { // since training data is insufficient, duplicate itself
       for (int j = 0; j < dataset[0].points().length; ++j) {
         points.add(dataset[0].points()[j]);
       }
+
       for (int j = 0; j < dataset[1].points().length; ++j) {
         points.add(dataset[1].points()[j]);
       }
     }
-    final JavaRDD<LabeledPoint> dataRDD  = sc.parallelize(points, 2);
 
+    final JavaRDD<LabeledPoint> dataRDD = sc.parallelize(points, 2);
     final int iteration = 100;
     int error = 0;
+
     for (int i = 0; i < iteration; ++i) {
       final RandomForestModel forest = RandomForest.train(dataRDD.rdd(),
           metaInfo.classification(), metaInfo.categorical(),  rnd.nextInt(),  20, false,
@@ -127,25 +130,29 @@ public class JavaRandomForestSuite implements Serializable {
       if (1.0 != forest.predict(TEST_DATA[0])) error += 1;
       if (1.0 != forest.predict(TEST_DATA[2])) error += 1;
     }
+
     assert (error < 2 * iteration * 0.1);    // error rate must be less than 10%
   }
 
   @Test
   public void runRandomForestWithPartialData() {
     final Data[] dataset = generateTrainingDataA();
-    final List<LabeledPoint> points = new ArrayList<LabeledPoint>();
+    final List<LabeledPoint> points = new ArrayList<>();
+
     for (int i = 0; i < 3; ++i) { // since training data is insufficient, duplicate itself
       for (int j = 0; j < dataset[0].points().length; ++j) {
         points.add(dataset[0].points()[j]);
       }
+
       for (int j = 0; j < dataset[1].points().length; ++j) {
         points.add(dataset[1].points()[j]);
       }
     }
-    final JavaRDD<LabeledPoint> dataRDD  = sc.parallelize(points, 2);
 
+    final JavaRDD<LabeledPoint> dataRDD  = sc.parallelize(points, 2);
     final int iteration = 100;
     int error = 0;
+
     for (int i = 0; i < iteration; ++i) {
       final RandomForestModel forest = RandomForest.train(dataRDD.rdd(),
           metaInfo.classification(), metaInfo.categorical(),  rnd.nextInt(),  20, true,
@@ -154,6 +161,7 @@ public class JavaRandomForestSuite implements Serializable {
       if (1.0 != forest.predict(TEST_DATA[0])) error += 1;
       if (1.0 != forest.predict(TEST_DATA[2])) error += 1;
     }
+
     assert (error < 2 * iteration * 0.2);    // error rate must be less than 20%
   }
 }
