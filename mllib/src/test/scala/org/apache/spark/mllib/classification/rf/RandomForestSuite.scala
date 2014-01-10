@@ -22,6 +22,7 @@ import scala.collection.mutable.ArrayBuffer
 
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.FunSuite
+import org.junit.Assert._
 
 import org.apache.spark.SparkContext
 import org.apache.spark.mllib.regression.LabeledPoint
@@ -123,44 +124,35 @@ class RandomForestSuite extends FunSuite with BeforeAndAfterAll {
 
   test ("RegressionComputeSplit") {
     val dataset = generateTrainingDataB()
-
     val computeSplit = new RegressionComputeSplit()
+
     var split = computeSplit(dataset(0), 1)
-    assert(math.abs(180.0 - split.ig) < EPSILON)
-    assert(math.abs(38.0 - split.split) < EPSILON)
+    assertEquals(180.0, split.ig, EPSILON)
+    assertEquals(38.0, split.split, EPSILON)
 
     val lesserThan = (point: LabeledPoint) => { point.features(1) < 38.0 }
     split = computeSplit(dataset(0).subset(lesserThan), 1)
-    assert(math.abs(76.5 - split.ig) < EPSILON)
-    assert(math.abs(21.5 - split.split) < EPSILON)
+    assertEquals(76.5, split.ig, EPSILON)
+    assertEquals(21.5, split.split, EPSILON)
 
     split = computeSplit(dataset(1), 0)
-    assert(math.abs(2205.0 - split.ig) < EPSILON)
-    assert(split.split.isNaN)
+    assertEquals(2205.0, split.ig, EPSILON)
+    assertEquals(Double.NaN, split.split, EPSILON)
 
     val equal = (point: LabeledPoint) => { point.features(0) == 0.0 }
     split = computeSplit(dataset(1).subset(equal), 1)
-    assert(math.abs(250.0 - split.ig) < EPSILON)
-    assert(math.abs(41.0 - split.split) < EPSILON)
+    assertEquals(250.0, split.ig, EPSILON)
+    assertEquals(41.0, split.split, EPSILON)
   }
 
   test("local Random forest for classification") {
     val dataset = generateTrainingDataA()
     val forest = buildForest(dataset)
-
     val predictions = forest.predict(TEST_DATA)
 
-    assert(1.0 == predictions(0)(0))
-    assert(predictions(0)(1).isNaN)
-    assert(predictions(0)(2).isNaN)
-
-    assert(1.0 == predictions(1)(0))
-    assert(0.0 == predictions(1)(1))
-    assert(predictions(1)(2).isNaN)
-
-    assert(1.0 == predictions(2)(0))
-    assert(1.0 == predictions(2)(1))
-    assert(predictions(2)(2).isNaN)
+    assertArrayEquals(Array(1.0, Double.NaN, Double.NaN), predictions(0), 0.0)
+    assertArrayEquals(Array(1.0, 0.0, Double.NaN), predictions(1), 0.0)
+    assertArrayEquals(Array(1.0, 1.0, Double.NaN), predictions(2), 0.0)
 
     assert(1.0 == forest.predict(TEST_DATA(0)))
     // This one is tie-broken, either 1 or 0 is OK
@@ -186,30 +178,24 @@ class RandomForestSuite extends FunSuite with BeforeAndAfterAll {
     }
 
     var predictions = forests(0).predict(dataset(0).points.map(_.features))
-    assert(math.abs(20.0 - predictions(0)(0)) < EPSILON)
-    assert(math.abs(20.0 - predictions(0)(1)) < EPSILON)
-    assert(math.abs(39.0 - predictions(1)(0)) < EPSILON)
-    assert(math.abs(29.0 - predictions(1)(1)) < EPSILON)
-    assert(math.abs(37.0 - predictions(2)(0)) < EPSILON)
-    assert(math.abs(29.0 - predictions(2)(1)) < EPSILON)
-    assert(math.abs(22.0 - predictions(17)(0)) < EPSILON)
-    assert(math.abs(23.0 - predictions(17)(1)) < EPSILON)
+    assertArrayEquals(Array(20.0, 20.0), predictions(0), EPSILON)
+    assertArrayEquals(Array(39.0, 29.0), predictions(1), EPSILON)
+    assertArrayEquals(Array(37.0, 29.0), predictions(2), EPSILON)
+    assertArrayEquals(Array(22.0, 23.0), predictions(17), EPSILON)
 
     predictions = forests(1).predict(dataset(1).points.map(_.features))
-    assert(math.abs(30.0 - predictions(19)(0)) < EPSILON)
-    assert(math.abs(29.0 - predictions(19)(1)) < EPSILON)
+    assertArrayEquals(Array(30.0, 29.0), predictions(19), EPSILON)
 
     predictions = forests(2).predict(dataset(2).points.map(_.features))
-    assert(math.abs(29.0 - predictions(9)(0)) < EPSILON)
-    assert(math.abs(28.0 - predictions(9)(1)) < EPSILON)
+    assertArrayEquals(Array(29.0, 28.0), predictions(9), EPSILON)
 
-    assert(math.abs(20.0 - forests(0).predict(dataset(0).points(0).features)) < EPSILON)
-    assert(math.abs(34.0 - forests(0).predict(dataset(0).points(1).features)) < EPSILON)
-    assert(math.abs(33.0 - forests(0).predict(dataset(0).points(2).features)) < EPSILON)
-    assert(math.abs(22.5 - forests(0).predict(dataset(0).points(17).features)) < EPSILON)
+    assertEquals(20.0, forests(0).predict(dataset(0).points(0).features), EPSILON)
+    assertEquals(34.0, forests(0).predict(dataset(0).points(1).features), EPSILON)
+    assertEquals(33.0, forests(0).predict(dataset(0).points(2).features), EPSILON)
+    assertEquals(22.5, forests(0).predict(dataset(0).points(17).features), EPSILON)
 
-    assert(math.abs(29.5 - forests(1).predict(dataset(1).points(19).features)) < EPSILON)
-    assert(math.abs(28.5 - forests(2).predict(dataset(2).points(9).features)) < EPSILON)
+    assertEquals(29.5, forests(1).predict(dataset(1).points(19).features), EPSILON)
+    assertEquals(28.5, forests(2).predict(dataset(2).points(9).features), EPSILON)
   }
 
   test("Spark Random forest for classification using full data") {
