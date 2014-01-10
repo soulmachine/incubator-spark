@@ -42,7 +42,8 @@ class RandomForest(private val metaInfo: DataMetaInfo, seed: Int)
       input: RDD[LabeledPoint],
       nbTrees: Int,
       m: Int,
-      minSplitNum: Int)
+      minSplitNum: Int,
+      minVarianceProportion: Double)
     : RandomForestModel =
   {
     val seeds = {
@@ -54,7 +55,7 @@ class RandomForest(private val metaInfo: DataMetaInfo, seed: Int)
       input.sample(withReplacement = true, 1.0, seeds(i)).coalesce(1).mapPartitions { iterator =>
         val rnd = new Random(seeds(i))
         val data = Data(metaInfo, iterator.toArray)
-        val builder = new DecisionTreeBuilder(m, minSplitNum)
+        val builder = new DecisionTreeBuilder(m, minSplitNum, minVarianceProportion)
         val tree = builder.build(rnd, data)
         List(tree).iterator
       }
@@ -72,7 +73,8 @@ class RandomForest(private val metaInfo: DataMetaInfo, seed: Int)
       input: RDD[LabeledPoint],
       nbTrees: Int,
       m: Int,
-      minSplitNum: Int)
+      minSplitNum: Int,
+      minVarianceProportion: Double)
     : RandomForestModel =
   {
     val numPartitions = input.partitions.length
@@ -89,7 +91,7 @@ class RandomForest(private val metaInfo: DataMetaInfo, seed: Int)
         val rnd = new Random(seed)
         val futures = Seq.tabulate(numTrees) { i =>
           val r = new Random(rnd.nextInt())
-          val builder = new DecisionTreeBuilder(m, minSplitNum)
+          val builder = new DecisionTreeBuilder(m, minSplitNum, minVarianceProportion)
           Future {
             builder.build(r, data.bagging(r))
           }
@@ -120,38 +122,42 @@ object RandomForest {
    *                of partitions.
    * @param m number of attributes to select randomly at each node, default is sqrt(dimension)
    * @param minSplitNum minimum number for split, default is 2
+   * @param minVarianceProportion minimum proportion of the total variance for split, default
+   *                              is 1.0e-3
    */
   def train(
       input: RDD[LabeledPoint],
-      partial: Boolean,
-      seed: Int,
       classification: Boolean,
       categorical: Array[Boolean],
+      seed: Int,
       nbTrees: Int,
+      partial: Boolean = false,
       m: Int = 0,
-      minSplitNum: Int = 2)
+      minSplitNum: Int = 2,
+      minVarianceProportion: Double = 1.0e-3)
     : RandomForestModel =
   {
     require(nbTrees > input.partitions.size)
     val metaInfo = generateMetaInfo(input, classification, categorical)
-    train(input, partial, seed, metaInfo, nbTrees, m, minSplitNum)
+    train(input, metaInfo, seed, nbTrees, partial, m, minSplitNum, minVarianceProportion)
   }
 
   private[rf] def train(
       input: RDD[LabeledPoint],
-      partial: Boolean,
-      seed: Int,
       metaInfo: DataMetaInfo,
+      seed: Int,
       nbTrees: Int,
+      partial: Boolean,
       m: Int,
-      minSplitNum: Int)
+      minSplitNum: Int,
+      minVarianceProportion: Double)
     : RandomForestModel =
   {
     val rm = new RandomForest(metaInfo, seed)
     if  (partial) {
-      rm.runPartial(input, nbTrees, m, minSplitNum)
+      rm.runPartial(input, nbTrees, m, minSplitNum, minVarianceProportion)
     } else {
-      rm.runFull(input, nbTrees, m, minSplitNum)
+      rm.runFull(input, nbTrees, m, minSplitNum, minVarianceProportion)
     }
   }
 

@@ -35,8 +35,8 @@ class RandomForestSuite extends FunSuite with BeforeAndAfterAll {
   @transient private val seed = 17
   @transient private val rnd = new Random(seed)
 
-  val metaInfo = DataMetaInfo(classification = true, Array(true, false, false, true),
-    2, Array(3, -1,-1,2))
+  @transient private val metaInfo = DataMetaInfo(classification = true,
+    Array(true, false, false, true), 2, Array(3, -1,-1,2))
 
   @transient private val TRAIN_DATA = Array(
     LabeledPoint(1, Array(1, 85.0, 85, 0)),
@@ -207,8 +207,8 @@ class RandomForestSuite extends FunSuite with BeforeAndAfterAll {
     val iteration = 100
     var error = 0
     for (i <- 0 until iteration) {
-      val forest = RandomForest.train( dataRDD, partial = false, rnd.nextInt(),
-        metaInfo.classification, metaInfo.categorical, 20, metaInfo.categorical.length, 0)
+      val forest = RandomForest.train( dataRDD, metaInfo.classification, metaInfo.categorical,
+        rnd.nextInt(), 20, false, metaInfo.categorical.length, 0)
 
       if (1.0 != forest.predict(TEST_DATA(0))) error += 1
       if (1.0 != forest.predict(TEST_DATA(2))) error += 1
@@ -225,8 +225,8 @@ class RandomForestSuite extends FunSuite with BeforeAndAfterAll {
     val iteration = 100
     var error = 0
     for (i <- 0 until iteration) {
-      val forest = RandomForest.train(dataRDD, partial = true, rnd.nextInt(),
-        metaInfo.classification, metaInfo.categorical, 20, metaInfo.categorical.length, 0)
+      val forest = RandomForest.train( dataRDD, metaInfo.classification, metaInfo.categorical,
+        rnd.nextInt(), 20, true, metaInfo.categorical.length, 0)
 
       if (1.0 != forest.predict(TEST_DATA(0))) error += 1
       if (1.0 != forest.predict(TEST_DATA(2))) error += 1
