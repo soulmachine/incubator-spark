@@ -84,8 +84,8 @@ class RandomForest(private val metaInfo: DataMetaInfo, seed: Int)
       }.coalesce(1)
     }
 
-    val trees = partitionToRDDs.map { rdd =>
-      rdd.mapPartitionsWithIndex { (index, iterator) =>
+    val trees = partitionToRDDs.zipWithIndex.map { case (rdd, index) =>
+      rdd.mapPartitions { iterator =>
         val data = Data(metaInfo, iterator.toArray)
         val numTrees = RandomForest.nbTreesOfPartition(nbTrees, numPartitions, index)
         val rnd = new Random(seed)
