@@ -55,7 +55,10 @@ class RandomForest(private val metaInfo: DataMetaInfo, seed: Int)
       input.sample(withReplacement = true, 1.0, seeds(i)).coalesce(1).mapPartitions { iterator =>
         val rnd = new Random(seeds(i))
         val data = Data(metaInfo, iterator.toArray)
-        val builder = new DecisionTreeBuilder(m, minSplitNum, minVarianceProportion)
+        val builder = new DecisionTreeBuilder(metaInfo)
+          .setM(m)
+          .setMinSplitNum(minSplitNum)
+          .setMinVarianceProportion(minVarianceProportion)
         val tree = builder.build(rnd, data)
         List(tree).iterator
       }
@@ -91,7 +94,10 @@ class RandomForest(private val metaInfo: DataMetaInfo, seed: Int)
         val rnd = new Random(seed)
         val futures = Seq.tabulate(numTrees) { i =>
           val r = new Random(rnd.nextInt())
-          val builder = new DecisionTreeBuilder(m, minSplitNum, minVarianceProportion)
+          val builder = new DecisionTreeBuilder(metaInfo)
+            .setM(m)
+            .setMinSplitNum(minSplitNum)
+            .setMinVarianceProportion(minVarianceProportion)
           Future {
             builder.build(r, data.bagging(r))
           }
@@ -108,37 +114,67 @@ class RandomForest(private val metaInfo: DataMetaInfo, seed: Int)
 
 object RandomForest {
   /**
-   * Train a Random Forest model given an RDD of (label, features) pairs.
+   * Train a Random Forest model for classification.
+   *
+   * @param input RDD of (label, array of features) pairs, for categorical features,
+   *        they should be converted to Integers, starting from 0.
+   * @param partial If the training data is too big to be loaded into one machine, set this to
+   *                true, so that each tree will be trained using partial data.
+   * @param seed Random seed
+   * @param categorical If the j'th feature is categorical, then categorical(j)=true;
+   *                    if the j'th feature is numerical, then categorical(j)=false.
+   * @param nbTrees Number of trees to build, should be greater than or equal to the number
+   *                of partitions.
+   * @param m number of attributes to select randomly at each node, default to sqrt(dimension)
+   *          in classification and dimension/3.0 in regression
+   * @param minSplitNum minimum number for split, default to 2
+   */
+  def train(
+      input: RDD[LabeledPoint],
+      categorical: Array[Boolean],
+      seed: Int,
+      nbTrees: Int,
+      partial: Boolean,
+      m: Int,
+      minSplitNum: Int)
+    : RandomForestModel =
+  {
+    require(nbTrees > input.partitions.size)
+    val metaInfo = generateMetaInfo(input, true, categorical)
+    train(input, metaInfo, seed, nbTrees, partial, m, minSplitNum, -1)
+  }
+
+  /**
+   * Train a Random Forest model for regression.
    *
    * @param input RDD of (label, array of features) pairs, for categorical features,
    *        they should be converted to Integers, starting from 0.
    * @param partial If the training data is too big to be loaded into one machine, set this to
    *                tree, so that each tree will be trained using partial data.
    * @param seed Random seed
-   * @param classification Whether the label is categorical or numerical.
    * @param categorical If the j'th feature is categorical, then categorical(j)=true;
    *                    if the j'th feature is numerical, then categorical(j)=false.
    * @param nbTrees Number of trees to build, should be greater than or equal to the number
    *                of partitions.
-   * @param m number of attributes to select randomly at each node, default is sqrt(dimension)
-   * @param minSplitNum minimum number for split, default is 2
+   * @param m number of attributes to select randomly at each node, default to sqrt(dimension)
+   *          in classification and dimension/3.0 in regression
+   * @param minSplitNum minimum number for split, default to 2
    * @param minVarianceProportion minimum proportion of the total variance for split, default
    *                              is 1.0e-3
    */
   def train(
       input: RDD[LabeledPoint],
-      classification: Boolean,
       categorical: Array[Boolean],
       seed: Int,
       nbTrees: Int,
-      partial: Boolean = false,
-      m: Int = 0,
-      minSplitNum: Int = 2,
-      minVarianceProportion: Double = 1.0e-3)
-    : RandomForestModel =
+      partial: Boolean,
+      m: Int,
+      minSplitNum: Int,
+      minVarianceProportion: Double)
+  : RandomForestModel =
   {
     require(nbTrees > input.partitions.size)
-    val metaInfo = generateMetaInfo(input, classification, categorical)
+    val metaInfo = generateMetaInfo(input, false, categorical)
     train(input, metaInfo, seed, nbTrees, partial, m, minSplitNum, minVarianceProportion)
   }
 

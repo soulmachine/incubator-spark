@@ -115,7 +115,9 @@ class RandomForestSuite extends FunSuite with BeforeAndAfterAll {
   private def buildForest(dataset: Array[Data]): RandomForestModel = {
     val trees = Array.tabulate[Node](dataset.length) { i =>
       val data = dataset(i)
-      val builder = new DecisionTreeBuilder(data.metainfo.categorical.length, 0)
+      val builder = new DecisionTreeBuilder(data.metainfo)
+        .setM(data.metainfo.categorical.length)
+        .setMinSplitNum(0)
       builder.build(rnd, data)
     }
 
@@ -207,7 +209,7 @@ class RandomForestSuite extends FunSuite with BeforeAndAfterAll {
     val iteration = 100
     var error = 0
     for (i <- 0 until iteration) {
-      val forest = RandomForest.train( dataRDD, metaInfo.classification, metaInfo.categorical,
+      val forest = RandomForest.train( dataRDD, metaInfo.categorical,
         rnd.nextInt(), 20, false, metaInfo.categorical.length, 0)
 
       if (1.0 != forest.predict(TEST_DATA(0))) error += 1
@@ -225,7 +227,7 @@ class RandomForestSuite extends FunSuite with BeforeAndAfterAll {
     val iteration = 100
     var error = 0
     for (i <- 0 until iteration) {
-      val forest = RandomForest.train( dataRDD, metaInfo.classification, metaInfo.categorical,
+      val forest = RandomForest.train( dataRDD, metaInfo.categorical,
         rnd.nextInt(), 20, true, metaInfo.categorical.length, 0)
 
       if (1.0 != forest.predict(TEST_DATA(0))) error += 1

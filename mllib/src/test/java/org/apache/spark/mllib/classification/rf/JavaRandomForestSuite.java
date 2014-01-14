@@ -123,9 +123,8 @@ public class JavaRandomForestSuite implements Serializable {
     int error = 0;
 
     for (int i = 0; i < iteration; ++i) {
-      final RandomForestModel forest = RandomForest.train(dataRDD.rdd(),
-          metaInfo.classification(), metaInfo.categorical(),  rnd.nextInt(),  20, false,
-          metaInfo.categorical().length, 0, 1.0e-3);
+      final RandomForestModel forest = RandomForest.train(dataRDD.rdd(), metaInfo.categorical(),
+          rnd.nextInt(),  20, false, metaInfo.categorical().length, 0);
 
       if (1.0 != forest.predict(TEST_DATA[0])) error += 1;
       if (1.0 != forest.predict(TEST_DATA[2])) error += 1;
@@ -154,9 +153,8 @@ public class JavaRandomForestSuite implements Serializable {
     int error = 0;
 
     for (int i = 0; i < iteration; ++i) {
-      final RandomForestModel forest = RandomForest.train(dataRDD.rdd(),
-          metaInfo.classification(), metaInfo.categorical(),  rnd.nextInt(),  20, true,
-          metaInfo.categorical().length, 0, 1.0e-3);
+      final RandomForestModel forest = RandomForest.train(dataRDD.rdd(), metaInfo.categorical(),
+          rnd.nextInt(),  20, true, metaInfo.categorical().length, 0);
 
       if (1.0 != forest.predict(TEST_DATA[0])) error += 1;
       if (1.0 != forest.predict(TEST_DATA[2])) error += 1;

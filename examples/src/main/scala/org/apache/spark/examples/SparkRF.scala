@@ -65,8 +65,8 @@ object SparkRF {
     }
 
     println("Begin training.")
-    val forest = RandomForest.train(points, true, Array(true, false, false, true),
-      17, 20, false, TRAIN_DATA(0).features.length, 0)
+    val forest = RandomForest.train(points, Array(true, false, false, true), 17, 20, false,
+      TRAIN_DATA(0).features.length, 0)
     println("Training completed.")
 
     println("Use the random forest for prediction.")

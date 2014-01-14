@@ -73,9 +73,9 @@ public class JavaRF {
     }
 
     System.out.println("Begin training.");
-    RandomForestModel forest = RandomForest.train( points.rdd(), true,
+    RandomForestModel forest = RandomForest.train( points.rdd(),
         new boolean[]{true, false, false, true}, 17, 20, false,
-        TRAIN_DATA[0].features().length, 0, 1.0e-3);
+        TRAIN_DATA[0].features().length, 0);
     System.out.println("Training completed.");
 
     System.out.println("Use the random forest for prediction.");
