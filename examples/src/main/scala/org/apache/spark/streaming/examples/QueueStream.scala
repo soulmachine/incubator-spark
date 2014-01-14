@@ -17,14 +17,14 @@
 
 package org.apache.spark.streaming.examples
 
-import scala.collection.mutable.SynchronizedQueue
 
 import org.apache.spark.rdd.RDD
 import org.apache.spark.streaming.{Seconds, StreamingContext}
 import org.apache.spark.streaming.StreamingContext._
+import scala.collection.mutable
 
 object QueueStream {
-  
+
   def main(args: Array[String]) {
     if (args.length < 1) {
       System.err.println("Usage: QueueStream <master>")
@@ -37,17 +37,17 @@ object QueueStream {
     val ssc = new StreamingContext(args(0), "QueueStream", Seconds(1),
       System.getenv("SPARK_HOME"), StreamingContext.jarOfClass(this.getClass))
 
-    // Create the queue through which RDDs can be pushed to 
+    // Create the queue through which RDDs can be pushed to
     // a QueueInputDStream
-    val rddQueue = new SynchronizedQueue[RDD[Int]]()
-    
+    val rddQueue = new mutable.SynchronizedQueue[RDD[Int]]()
+
     // Create the QueueInputDStream and use it do some processing
     val inputStream = ssc.queueStream(rddQueue)
     val mappedStream = inputStream.map(x => (x % 10, 1))
     val reducedStream = mappedStream.reduceByKey(_ + _)
-    reducedStream.print()    
+    reducedStream.print()
     ssc.start()
-    
+
     // Create and push some RDDs into
     for (i <- 1 to 30) {
       rddQueue += ssc.sparkContext.makeRDD(1 to 1000, 10)

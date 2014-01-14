@@ -17,9 +17,6 @@
 
 package org.apache.spark.examples.graphx
 
-import org.apache.spark.SparkContext._
-import org.apache.spark._
-import org.apache.spark.graphx._
 import org.apache.spark.graphx.lib.Analytics
 
 /**

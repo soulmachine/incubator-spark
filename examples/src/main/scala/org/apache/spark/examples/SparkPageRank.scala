@@ -36,7 +36,7 @@ object SparkPageRank {
       System.err.println("Usage: PageRank <master> <file> <number_of_iterations>")
       System.exit(1)
     }
-    var iters = args(2).toInt
+    val iters = args(2).toInt
     val ctx = new SparkContext(args(0), "PageRank",
       System.getenv("SPARK_HOME"), SparkContext.jarOfClass(this.getClass))
     val lines = ctx.textFile(args(1), 1)

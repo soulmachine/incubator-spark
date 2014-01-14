@@ -37,8 +37,8 @@ object SparkHdfsLR {
     //val nums = line.split(' ').map(_.toDouble)
     //return DataPoint(new Vector(nums.slice(1, D+1)), nums(0))
     val tok = new java.util.StringTokenizer(line, " ")
-    var y = tok.nextToken.toDouble
-    var x = new Array[Double](D)
+    val y = tok.nextToken.toDouble
+    val x = new Array[Double](D)
     var i = 0
     while (i < D) {
       x(i) = tok.nextToken.toDouble; i += 1
@@ -54,11 +54,11 @@ object SparkHdfsLR {
     val inputPath = args(1)
     val conf = SparkHadoopUtil.get.newConfiguration()
     val sc = new SparkContext(args(0), "SparkHdfsLR",
-      System.getenv("SPARK_HOME"), SparkContext.jarOfClass(this.getClass), Map(), 
+      System.getenv("SPARK_HOME"), SparkContext.jarOfClass(this.getClass), Map(),
       InputFormatInfo.computePreferredLocations(
           Seq(new InputFormatInfo(conf, classOf[org.apache.hadoop.mapred.TextInputFormat], inputPath))))
     val lines = sc.textFile(inputPath)
-    val points = lines.map(parsePoint _).cache()
+    val points = lines.map(parsePoint).cache()
     val ITERATIONS = args(2).toInt
 
     // Initialize w to a random value

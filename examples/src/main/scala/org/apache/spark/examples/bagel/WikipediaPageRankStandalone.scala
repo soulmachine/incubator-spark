@@ -52,9 +52,9 @@ object WikipediaPageRankStandalone {
     val partitioner = new HashPartitioner(sc.defaultParallelism)
     val links =
       if (usePartitioner)
-        input.map(parseArticle _).partitionBy(partitioner).cache()
+        input.map(parseArticle).partitionBy(partitioner).cache()
       else
-        input.map(parseArticle _).cache()
+        input.map(parseArticle).cache()
     val n = links.count()
     val defaultRank = 1.0 / n
     val a = 0.15
@@ -67,10 +67,10 @@ object WikipediaPageRankStandalone {
     // Print the result
     System.err.println("Articles with PageRank >= "+threshold+":")
     val top =
-      (ranks
-       .filter { case (id, rank) => rank >= threshold }
-       .map { case (id, rank) => "%s\t%s\n".format(id, rank) }
-       .collect().mkString)
+      ranks
+        .filter { case (id, rank) => rank >= threshold }
+        .map { case (id, rank) => "%s\t%s\n".format(id, rank) }
+        .collect().mkString
     println(top)
 
     val time = (System.currentTimeMillis - startTime) / 1000.0
@@ -122,11 +122,11 @@ object WikipediaPageRankStandalone {
             Array[(String, Double)]()
           }
       }
-      ranks = (contribs.combineByKey((x: Double) => x,
+      ranks = contribs.combineByKey((x: Double) => x,
                                      (x: Double, y: Double) => x + y,
                                      (x: Double, y: Double) => x + y,
                                      partitioner)
-               .mapValues(sum => a/n + (1-a)*sum))
+               .mapValues(sum => a/n + (1-a)*sum)
     }
     ranks
   }
@@ -163,7 +163,7 @@ class WPRSerializationStream(os: OutputStream) extends SerializationStream {
 
   def writeObject[T](t: T): SerializationStream = t match {
     case (id: String, wrapper: ArrayBuffer[_]) => wrapper(0) match {
-      case links: Array[String] => {
+      case links: Array[String] =>
         dos.writeInt(0) // links
         dos.writeUTF(id)
         dos.writeInt(links.length)
@@ -171,20 +171,17 @@ class WPRSerializationStream(os: OutputStream) extends SerializationStream {
           dos.writeUTF(link)
         }
         this
-      }
-      case rank: Double => {
+      case rank: Double =>
         dos.writeInt(1) // rank
         dos.writeUTF(id)
         dos.writeDouble(rank)
         this
-      }
     }
-    case (id: String, rank: Double) => {
+    case (id: String, rank: Double) =>
       dos.writeInt(2) // rank without wrapper
       dos.writeUTF(id)
       dos.writeDouble(rank)
       this
-    }
   }
 
   def flush() { dos.flush() }
@@ -197,7 +194,7 @@ class WPRDeserializationStream(is: InputStream) extends DeserializationStream {
   def readObject[T](): T = {
     val typeId = dis.readInt()
     typeId match {
-      case 0 => {
+      case 0 =>
         val id = dis.readUTF()
         val numLinks = dis.readInt()
         val links = new Array[String](numLinks)
@@ -206,17 +203,14 @@ class WPRDeserializationStream(is: InputStream) extends DeserializationStream {
           links(i) = link
         }
         (id, ArrayBuffer(links)).asInstanceOf[T]
-      }
-      case 1 => {
+      case 1 =>
         val id = dis.readUTF()
         val rank = dis.readDouble()
         (id, ArrayBuffer(rank)).asInstanceOf[T]
-      }
-      case 2 => {
+      case 2 =>
         val id = dis.readUTF()
         val rank = dis.readDouble()
         (id, rank).asInstanceOf[T]
-     }
     }
   }
 

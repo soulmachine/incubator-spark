@@ -113,7 +113,7 @@ object SparkALS {
 
     val sc = new SparkContext(host, "SparkALS",
       System.getenv("SPARK_HOME"), SparkContext.jarOfClass(this.getClass))
-    
+
     val R = generateR()
 
     // Initialize m and u randomly
@@ -128,11 +128,11 @@ object SparkALS {
       println("Iteration " + iter + ":")
       ms = sc.parallelize(0 until M, slices)
                 .map(i => update(i, msb.value(i), usb.value, Rc.value))
-                .toArray
+                .toArray()
       msb = sc.broadcast(ms) // Re-broadcast ms because it was updated
       us = sc.parallelize(0 until U, slices)
                 .map(i => update(i, usb.value(i), msb.value, algebra.transpose(Rc.value)))
-                .toArray
+                .toArray()
       usb = sc.broadcast(us) // Re-broadcast us because it was updated
       println("RMSE = " + rmse(R, ms, us))
       println()
