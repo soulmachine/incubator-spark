@@ -17,12 +17,11 @@
 
 package org.apache.spark.examples.bagel
 
+import scala.xml.{XML,NodeSeq}
 import org.apache.spark._
 import org.apache.spark.SparkContext._
-
 import org.apache.spark.bagel._
 
-import scala.xml.{XML,NodeSeq}
 
 /**
  * Run PageRank on XML Wikipedia dumps from http://wiki.freebase.com/wiki/WEX. Uses the "articles"
@@ -97,7 +96,7 @@ object WikipediaPageRank {
       result
         .filter { case (id, vertex) => vertex.value >= threshold }
         .map { case (id, vertex) => "%s\t%s\n".format(id, vertex.value) }
-        .collect.mkString
+        .collect().mkString
     println(top)
   }
 }

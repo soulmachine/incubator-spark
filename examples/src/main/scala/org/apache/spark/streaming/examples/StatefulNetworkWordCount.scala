@@ -20,6 +20,7 @@ package org.apache.spark.streaming.examples
 import org.apache.spark.streaming._
 import org.apache.spark.streaming.StreamingContext._
 
+
 /**
  * Counts words cumulatively in UTF8 encoded, '\n' delimited text received from the network every second.
  * Usage: StatefulNetworkWordCount <master> <hostname> <port>
@@ -43,9 +44,7 @@ object StatefulNetworkWordCount {
 
     val updateFunc = (values: Seq[Int], state: Option[Int]) => {
       val currentCount = values.sum
-
       val previousCount = state.getOrElse(0)
-
       Some(currentCount + previousCount)
     }
 
